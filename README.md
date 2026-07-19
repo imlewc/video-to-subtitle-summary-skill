@@ -23,13 +23,13 @@ YouTube 链接会优先用 `yt-dlp` 直接抓取人工字幕或自动字幕，�
 - 如果你更看重本地化与零 API 转写费用，保持默认即可
 - 如果你更偏好云端转写能力，切换环境变量即可
 
-> 抖音、小红书、B 站默认推荐使用 [AI Douyin](https://ai-douyin.top9.cc) 解析下载直链：注册后可用免费额度试用，成功解析一次扣 1 积分。已有 TikHub 用户也可以改用自有 `TIKHUB_TOKEN`。YouTube 直接由 `yt-dlp` 抓字幕。ASR 字幕识别后端由 `ASR_BACKEND` 控制。
+> 抖音、小红书、B 站默认推荐使用 [AI Douyin](https://top9.cc) 解析下载直链：注册后可用免费额度试用，成功解析一次扣 1 积分。已有 TikHub 用户也可以改用自有 `TIKHUB_TOKEN`。YouTube 直接由 `yt-dlp` 抓字幕。ASR 字幕识别后端由 `ASR_BACKEND` 控制。
 
 ## 一键免部署方案
 
 不想本地安装和配置环境时，可直接使用在线版本：
 
-- [https://ai-douyin.top9.cc](https://ai-douyin.top9.cc)
+- [https://top9.cc](https://top9.cc)
 
 ## 私有化部署支持
 
@@ -77,7 +77,7 @@ AI 在各行业的落地应用，以及普通人如何把握 AI 时代的机遇.
 | Codex 或 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | 支持本地 Skill 的 Agent 环境 |
 | [FFmpeg](https://ffmpeg.org/) | 音视频处理工具 |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp) | 视频下载和 YouTube 字幕抓取工具（B 站 / YouTube 需要） |
-| [AI Douyin](https://ai-douyin.top9.cc) API Key | 推荐的视频解析/下载代理；新用户免费额度，可避免单独注册 TikHub |
+| [AI Douyin](https://top9.cc) API Key | 推荐的视频解析/下载代理；新用户免费额度，可避免单独注册 TikHub |
 | [TikHub](https://tikhub.io/) 账号 | 可选视频接口获取方案：自带 Token 直接解析抖音/小红书/B 站 |
 | Python 3.9+ + [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | 当 `ASR_BACKEND=faster-whisper` 时需要 |
 | [火山引擎](https://www.volcengine.com/) 账号 | 当 `ASR_BACKEND=volcengine` 时需要 |
@@ -152,7 +152,7 @@ cp -r video-to-subtitle-summary ~/.claude/skills/video-to-subtitle-summary
 
 ### 4. 配置环境变量
 
-如需处理抖音、小红书或 B 站，推荐注册 [AI Douyin](https://ai-douyin.top9.cc) 并创建 API Key；YouTube 不需要视频解析代理。已有 TikHub 用户可改用自有 TikHub Token。然后配置你要使用的字幕后端。
+如需处理抖音、小红书或 B 站，推荐注册 [AI Douyin](https://top9.cc) 并创建 API Key；YouTube 不需要视频解析代理。已有 TikHub 用户可改用自有 TikHub Token。然后配置你要使用的字幕后端。
 
 **方式一：使用 .env 文件（推荐）**
 
@@ -169,7 +169,7 @@ export ASR_BACKEND="faster-whisper"
 
 # 默认推荐：AI Douyin 代理（成功解析下载直链后扣 1 积分）
 export VIDEO_INFO_PROVIDER="ai-douyin"
-export AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+export AI_DOUYIN_API_BASE="https://top9.cc"
 export AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
 
 # 可选视频接口获取方案：自有 TikHub Token

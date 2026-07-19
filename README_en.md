@@ -23,7 +23,7 @@ That means:
 - If you want local/private processing and no subtitle API fees, keep the default
 - If you prefer the cloud backend, switch the environment variable
 
-> Douyin, Xiaohongshu, and Bilibili use [AI Douyin](https://ai-douyin.top9.cc) by default to resolve download URLs. New users can try the free quota; each successful download URL resolution costs 1 credit. Existing TikHub users can switch to their own `TIKHUB_TOKEN`. YouTube subtitles are fetched directly with `yt-dlp`. The transcription backend itself is controlled by `ASR_BACKEND`.
+> Douyin, Xiaohongshu, and Bilibili use [AI Douyin](https://top9.cc) by default to resolve download URLs. New users can try the free quota; each successful download URL resolution costs 1 credit. Existing TikHub users can switch to their own `TIKHUB_TOKEN`. YouTube subtitles are fetched directly with `yt-dlp`. The transcription backend itself is controlled by `ASR_BACKEND`.
 
 ## Demo
 
@@ -66,7 +66,7 @@ and how individuals can seize opportunities in the AI era...
 | Codex or [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | Agent environment with local Skill support |
 | [FFmpeg](https://ffmpeg.org/) | Audio/video processing tool |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp) | Video download and YouTube subtitle tool (Bilibili / YouTube) |
-| [AI Douyin](https://ai-douyin.top9.cc) API Key | Recommended video parsing/download proxy; free trial quota for new users |
+| [AI Douyin](https://top9.cc) API Key | Recommended video parsing/download proxy; free trial quota for new users |
 | [TikHub](https://tikhub.io/) account | Optional video API provider if you want to use your own TikHub token |
 | Python 3.9+ + [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | Required when `ASR_BACKEND=faster-whisper` |
 | [Volcengine](https://www.volcengine.com/) account | Required when `ASR_BACKEND=volcengine` |
@@ -141,7 +141,7 @@ cp -r video-to-subtitle-summary ~/.claude/skills/video-to-subtitle-summary
 
 ### 4. Configure Environment Variables
 
-If you need Douyin, Xiaohongshu, or Bilibili, register [AI Douyin](https://ai-douyin.top9.cc) and create an API Key. YouTube does not require a video parsing proxy. Existing TikHub users can switch to their own TikHub token. Then set the subtitle backend you want to use.
+If you need Douyin, Xiaohongshu, or Bilibili, register [AI Douyin](https://top9.cc) and create an API Key. YouTube does not require a video parsing proxy. Existing TikHub users can switch to their own TikHub token. Then set the subtitle backend you want to use.
 
 **Option 1: Using `.env` file (Recommended)**
 
@@ -157,7 +157,7 @@ export ASR_BACKEND="faster-whisper"
 
 # Recommended default: AI Douyin proxy
 export VIDEO_INFO_PROVIDER="ai-douyin"
-export AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+export AI_DOUYIN_API_BASE="https://top9.cc"
 export AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
 
 # Optional provider: your own TikHub token

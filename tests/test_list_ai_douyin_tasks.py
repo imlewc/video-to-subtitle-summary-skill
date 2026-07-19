@@ -39,16 +39,16 @@ class ListAIDouyinTasksTests(unittest.TestCase):
         module = load_module()
 
         self.assertEqual(
-            module.build_tasks_endpoint("https://ai-douyin.top9.cc"),
-            "https://ai-douyin.top9.cc/api/v1/tasks",
+            module.build_tasks_endpoint("https://top9.cc"),
+            "https://top9.cc/api/v1/tasks",
         )
         self.assertEqual(
-            module.build_tasks_endpoint("https://ai-douyin.top9.cc/api"),
-            "https://ai-douyin.top9.cc/api/v1/tasks",
+            module.build_tasks_endpoint("https://top9.cc/api"),
+            "https://top9.cc/api/v1/tasks",
         )
         self.assertEqual(
-            module.build_tasks_endpoint("https://ai-douyin.top9.cc/api/v1"),
-            "https://ai-douyin.top9.cc/api/v1/tasks",
+            module.build_tasks_endpoint("https://top9.cc/api/v1"),
+            "https://top9.cc/api/v1/tasks",
         )
 
     def test_fetch_tasks_sends_api_key_and_query_parameters(self):
@@ -62,7 +62,7 @@ class ListAIDouyinTasksTests(unittest.TestCase):
             )
 
         response = module.fetch_tasks(
-            "https://ai-douyin.top9.cc/api/v1/tasks",
+            "https://top9.cc/api/v1/tasks",
             "sk-test",
             page=2,
             page_size=5,

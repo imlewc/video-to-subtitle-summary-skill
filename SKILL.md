@@ -48,7 +48,7 @@ YouTube 优先使用 `yt-dlp` 直接抓取人工字幕或自动字幕；只有�
 ```bash
 ASR_BACKEND="faster-whisper"
 VIDEO_INFO_PROVIDER="ai-douyin"
-AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+AI_DOUYIN_API_BASE="https://top9.cc"
 AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
 TIKHUB_TOKEN=""
 
@@ -66,7 +66,7 @@ BYTEDANCE_VC_APPID="your_appid"
 ```bash
 export ASR_BACKEND="faster-whisper"
 export VIDEO_INFO_PROVIDER="ai-douyin"
-export AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+export AI_DOUYIN_API_BASE="https://top9.cc"
 export AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
 export TIKHUB_TOKEN=""
 
@@ -156,7 +156,7 @@ ASR_BACKEND="$(read_env ASR_BACKEND)"
 VIDEO_INFO_PROVIDER="$(read_env VIDEO_INFO_PROVIDER)"
 [ -z "$VIDEO_INFO_PROVIDER" ] && VIDEO_INFO_PROVIDER="ai-douyin"
 AI_DOUYIN_API_BASE="$(read_env AI_DOUYIN_API_BASE)"
-[ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+[ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://top9.cc"
 AI_DOUYIN_API_KEY="$(read_env AI_DOUYIN_API_KEY)"
 TIKHUB_TOKEN="$(read_env TIKHUB_TOKEN)"
 BYTEDANCE_VC_TOKEN="$(read_env BYTEDANCE_VC_TOKEN)"
@@ -216,7 +216,7 @@ fi
 如果检查失败：
 - `ASR_BACKEND=faster-whisper`：优先运行 `python3 "$SKILL_DIR/scripts/install_faster_whisper.py"`，或参考 [docs/faster-whisper-setup.md](./docs/faster-whisper-setup.md)
 - `ASR_BACKEND=volcengine`：参考 [docs/bytedance-vc-setup.md](./docs/bytedance-vc-setup.md)
-- `AI_DOUYIN_API_KEY`：注册 [AI Douyin](https://ai-douyin.top9.cc) 领取免费额度并创建 API Key；余额不足时充值积分，或改用 `VIDEO_INFO_PROVIDER=tikhub` + `TIKHUB_TOKEN`
+- `AI_DOUYIN_API_KEY`：注册 [AI Douyin](https://top9.cc) 领取免费额度并创建 API Key；余额不足时充值积分，或改用 `VIDEO_INFO_PROVIDER=tikhub` + `TIKHUB_TOKEN`
 
 ### 步骤 1：获取视频信息/下载直链（仅在线视频模式）
 
@@ -231,7 +231,7 @@ fi
 
 #### 默认推荐：AI Douyin 代理
 
-AI Douyin 适合不想单独注册 TikHub 的用户。注册 [https://ai-douyin.top9.cc](https://ai-douyin.top9.cc) 后领取免费额度并创建 API Key，成功解析下载直链后扣 1 积分；失败不扣。余额不足时接口返回 HTTP `402` / `insufficient balance`。
+AI Douyin 适合不想单独注册 TikHub 的用户。注册 [https://top9.cc](https://top9.cc) 后领取免费额度并创建 API Key，成功解析下载直链后扣 1 积分；失败不扣。余额不足时接口返回 HTTP `402` / `insufficient balance`。
 
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
@@ -247,10 +247,10 @@ read_env() {
 }
 
 AI_DOUYIN_API_BASE="$(read_env AI_DOUYIN_API_BASE)"
-[ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+[ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://top9.cc"
 AI_DOUYIN_API_KEY="$(read_env AI_DOUYIN_API_KEY)"
 
-# API Base 支持填 https://ai-douyin.top9.cc 或 https://ai-douyin.top9.cc/api/v1
+# API Base 支持填 https://top9.cc 或 https://top9.cc/api/v1
 case "$AI_DOUYIN_API_BASE" in
   */api/v1) AI_DOUYIN_DOWNLOAD_URL_ENDPOINT="$AI_DOUYIN_API_BASE/video/download-url" ;;
   */api) AI_DOUYIN_DOWNLOAD_URL_ENDPOINT="$AI_DOUYIN_API_BASE/v1/video/download-url" ;;
@@ -267,7 +267,7 @@ HTTP_CODE=$(tail -n1 /tmp/video_analysis/download_url_response.txt)
 sed '$d' /tmp/video_analysis/download_url_response.txt > /tmp/video_analysis/download_url.json
 
 if [ "$HTTP_CODE" = "402" ]; then
-  echo "ERROR: AI Douyin 余额不足（insufficient balance）。请到 https://ai-douyin.top9.cc 购买积分，或改用 VIDEO_INFO_PROVIDER=tikhub + TIKHUB_TOKEN。"
+  echo "ERROR: AI Douyin 余额不足（insufficient balance）。请到 https://top9.cc 购买积分，或改用 VIDEO_INFO_PROVIDER=tikhub + TIKHUB_TOKEN。"
   exit 1
 elif [ "$HTTP_CODE" = "401" ]; then
   echo "ERROR: AI Douyin API Key 缺失或无效。请检查 AI_DOUYIN_API_KEY。"

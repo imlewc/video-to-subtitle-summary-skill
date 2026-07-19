@@ -10,7 +10,7 @@ AI Douyin 是本 Skill 推荐的视频解析/下载代理，适合不想单独�
 
 ## 获取 API Key
 
-1. 打开 [https://ai-douyin.top9.cc](https://ai-douyin.top9.cc)
+1. 打开 [https://top9.cc](https://top9.cc)
 2. 注册/登录账号。
 3. 领取新用户免费额度。
 4. 在后台创建 API Key。
@@ -18,7 +18,7 @@ AI Douyin 是本 Skill 推荐的视频解析/下载代理，适合不想单独�
 
 ```bash
 VIDEO_INFO_PROVIDER=ai-douyin
-AI_DOUYIN_API_BASE=https://ai-douyin.top9.cc
+AI_DOUYIN_API_BASE=https://top9.cc
 AI_DOUYIN_API_KEY=sk_xxx
 ```
 
@@ -29,7 +29,7 @@ AI_DOUYIN_API_KEY=sk_xxx
 ## 调用示例
 
 ```bash
-curl -sS -X POST "https://ai-douyin.top9.cc/api/v1/video/download-url" \
+curl -sS -X POST "https://top9.cc/api/v1/video/download-url" \
   -H "X-API-Key: sk_xxx" \
   -H "Content-Type: application/json" \
   -d '{"url":"https://v.douyin.com/xxxxxx/"}'

@@ -2,7 +2,7 @@
 
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
-**Goal:** 让 `video-to-subtitle-summary` skill 默认支持 `https://ai-douyin.top9.cc` 作为视频解析/下载代理：用户无需注册 TikHub，只需注册 AI Douyin、领取免费额度、创建 API Key 后即可试用；后续可在 AI Douyin 购买积分，或改回自有 TikHub Token。
+**Goal:** 让 `video-to-subtitle-summary` skill 默认支持 `https://top9.cc` 作为视频解析/下载代理：用户无需注册 TikHub，只需注册 AI Douyin、领取免费额度、创建 API Key 后即可试用；后续可在 AI Douyin 购买积分，或改回自有 TikHub Token。
 
 **Architecture:** 保留 TikHub 直连作为可选高级/自托管路径；新增 AI Douyin API Key 路径作为默认推荐。后端新增“视频解析代理”计费语义（当前 `/api/v1/video/download-url` 已存在但不扣积分），skill 侧用 `AI_DOUYIN_API_BASE` + `AI_DOUYIN_API_KEY` 调用该代理拿到下载直链，再继续本地 ASR/总结流程。
 
@@ -152,7 +152,7 @@ make test
 
 **Public contract:**
 ```bash
-curl -sS -X POST 'https://ai-douyin.top9.cc/api/v1/video/download-url' \
+curl -sS -X POST 'https://top9.cc/api/v1/video/download-url' \
   -H 'X-API-Key: sk_xxx' \
   -H 'Content-Type: application/json' \
   -d '{"url":"https://v.douyin.com/.../"}'
@@ -185,7 +185,7 @@ curl -sS -X POST 'https://ai-douyin.top9.cc/api/v1/video/download-url' \
 1. 注册/登录后，系统会赠送免费额度。
 2. 创建一个 API Key。
 3. 在 skill 的 .env 中配置：
-   AI_DOUYIN_API_BASE=https://ai-douyin.top9.cc
+   AI_DOUYIN_API_BASE=https://top9.cc
    AI_DOUYIN_API_KEY=sk_xxx
 4. 没有额度时可充值；也可以配置自己的 TIKHUB_TOKEN 走 TikHub。
 ```
@@ -226,7 +226,7 @@ pnpm build
 **New env:**
 ```bash
 # 推荐：AI Douyin 代理，注册即可领取免费额度
-AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+AI_DOUYIN_API_BASE="https://top9.cc"
 AI_DOUYIN_API_KEY=""
 
 # 可选：如果你有自己的 TikHub Token，可绕过 AI Douyin 代理
@@ -252,19 +252,19 @@ FW_COMPUTE_TYPE=""
   - 若 `AI_DOUYIN_API_KEY` 存在，优先走 AI Douyin。
   - 否则若 `TIKHUB_TOKEN` 存在，走 TikHub。
   - 两者都没有时，提示：
-    1. 去 `https://ai-douyin.top9.cc` 注册领取免费额度并创建 API Key；或
+    1. 去 `https://top9.cc` 注册领取免费额度并创建 API Key；或
     2. 自行注册 TikHub 并填 `TIKHUB_TOKEN`。
 
 **Suggested pseudo shell:**
 ```bash
 AI_DOUYIN_API_BASE="$(read_env AI_DOUYIN_API_BASE)"
-[ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://ai-douyin.top9.cc"
+[ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://top9.cc"
 AI_DOUYIN_API_KEY="$(read_env AI_DOUYIN_API_KEY)"
 TIKHUB_TOKEN="$(read_env TIKHUB_TOKEN)"
 
 if [ "$PLATFORM" != "youtube" ]; then
   if [ -z "$AI_DOUYIN_API_KEY" ] && [ -z "$TIKHUB_TOKEN" ]; then
-    echo "ERROR: 缺少视频解析凭证。推荐注册 https://ai-douyin.top9.cc 获取免费额度并创建 API Key；或配置自己的 TIKHUB_TOKEN。"
+    echo "ERROR: 缺少视频解析凭证。推荐注册 https://top9.cc 获取免费额度并创建 API Key；或配置自己的 TIKHUB_TOKEN。"
     exit 1
   fi
 fi
@@ -313,9 +313,9 @@ curl -sS -X POST "$AI_DOUYIN_API_BASE/api/v1/video/download-url" \
 **Chinese copy:**
 ```markdown
 ### 不想注册 TikHub？
-可以使用在线代理：注册 [AI Douyin](https://ai-douyin.top9.cc) 后领取免费额度，创建 API Key，填入：
+可以使用在线代理：注册 [AI Douyin](https://top9.cc) 后领取免费额度，创建 API Key，填入：
 
-AI_DOUYIN_API_BASE=https://ai-douyin.top9.cc
+AI_DOUYIN_API_BASE=https://top9.cc
 AI_DOUYIN_API_KEY=sk_xxx
 
 免费额度用完后可在 AI Douyin 购买积分；如果你已有 TikHub，也可以直接配置 TIKHUB_TOKEN。
@@ -372,7 +372,7 @@ python3 -m pytest tests -q
 
 ### Task 5.1: 部署 AI Douyin 后端/前端
 
-**Objective:** 线上 `https://ai-douyin.top9.cc` 提供稳定代理能力。
+**Objective:** 线上 `https://top9.cc` 提供稳定代理能力。
 
 **Commands:**
 ```bash
@@ -401,7 +401,7 @@ git commit -m "feat: support ai douyin credit proxy"
 **Release notes:**
 - 新增 `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY`。
 - TikHub 从必需改为可选。
-- 免费试用入口：`https://ai-douyin.top9.cc`。
+- 免费试用入口：`https://top9.cc`。
 - 余额不足时可充值或配置自有 TikHub。
 
 ---

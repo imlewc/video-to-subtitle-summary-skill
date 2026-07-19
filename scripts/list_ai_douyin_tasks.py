@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 
-DEFAULT_API_BASE = "https://ai-douyin.top9.cc"
+DEFAULT_API_BASE = "https://top9.cc"
 
 
 def load_env_file(path: Path) -> dict[str, str]:
