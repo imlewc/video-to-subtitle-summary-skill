@@ -6,19 +6,21 @@
 - **在线视频：** 提供视频链接 → 自动下载视频或直接抓字幕 → 生成字幕 → AI 总结
 - **本地文件：** 提供本地视频/音频路径 → 提取音频（如需） → 选择字幕后端 → 生成字幕 → AI 总结
 
-默认字幕后端是本地 `faster-whisper`，也支持通过环境变量切换到火山引擎 VC。
+默认字幕后端是本地 `faster-whisper`，也支持通过环境变量切换到 Atlas Cloud 或火山引擎 VC。
 YouTube 链接会优先用 `yt-dlp` 直接抓取人工字幕或自动字幕，不需要 AI Douyin/TikHub，也不会默认下载视频或跑 ASR。
 
 [English](./README_en.md)
 
 ## 更新说明
 
-当前版本支持两种字幕转写后端：
+当前版本支持三种字幕转写后端：
 - **`faster-whisper`**：默认方案，本地转写，不依赖火山引擎
+- **`atlascloud`**：可选 Atlas Cloud 云端方案，使用 Seed ASR 2.0
 - **`volcengine`**：可选方案，使用火山引擎音视频字幕服务
 
 这意味着：
 - 默认情况下不需要注册和开通火山引擎
+- 只有在 `ASR_BACKEND=atlascloud` 时，才需要配置 `ATLASCLOUD_API_KEY`
 - 只有在 `ASR_BACKEND=volcengine` 时，才需要配置 `BYTEDANCE_VC_TOKEN` 和 `BYTEDANCE_VC_APPID`
 - 如果你更看重本地化与零 API 转写费用，保持默认即可
 - 如果你更偏好云端转写能力，切换环境变量即可
@@ -80,6 +82,7 @@ AI 在各行业的落地应用，以及普通人如何把握 AI 时代的机遇.
 | [AI Douyin](https://top9.cc) API Key | 推荐的视频解析/下载代理；新用户免费额度，可避免单独注册 TikHub |
 | [TikHub](https://tikhub.io/) 账号 | 可选视频接口获取方案：自带 Token 直接解析抖音/小红书/B 站 |
 | Python 3.9+ + [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | 当 `ASR_BACKEND=faster-whisper` 时需要 |
+| [Atlas Cloud](https://www.atlascloud.ai/) API Key | 当 `ASR_BACKEND=atlascloud` 时需要 |
 | [火山引擎](https://www.volcengine.com/) 账号 | 当 `ASR_BACKEND=volcengine` 时需要 |
 
 ## 快速安装
@@ -98,6 +101,13 @@ ASR_BACKEND=faster-whisper
 ASR_BACKEND=volcengine
 ```
 
+如需使用 Atlas Cloud：
+
+```bash
+ASR_BACKEND=atlascloud
+ATLASCLOUD_API_KEY=your_atlascloud_api_key
+```
+
 ### 2. 按后端安装依赖
 
 **方案 A：faster-whisper（默认）**
@@ -111,6 +121,10 @@ python3 ~/.codex/skills/video-to-subtitle-summary/scripts/install_faster_whisper
 **方案 B：火山引擎 VC（可选）**
 
 按照 [docs/bytedance-vc-setup.md](./docs/bytedance-vc-setup.md) 开通服务并获取 `APPID` / `Token`。
+
+**方案 C：Atlas Cloud（可选）**
+
+无需额外 Python 依赖；配置 `ATLASCLOUD_API_KEY` 后运行内置的 `scripts/transcribe_atlascloud.py`。默认模型为 `bytedance/seed-asr-2.0`。
 
 ### 2.5 安装 FFmpeg
 
@@ -180,6 +194,10 @@ export FW_DEVICE="auto"
 export FW_COMPUTE_TYPE=""
 export FW_PYTHON=""
 
+export ATLASCLOUD_API_KEY="your_atlascloud_api_key"
+export ATLASCLOUD_ASR_MODEL="bytedance/seed-asr-2.0"
+export ATLASCLOUD_API_BASE="https://api.atlascloud.ai/api/v1"
+
 export BYTEDANCE_VC_TOKEN="your_bytedance_vc_token"
 export BYTEDANCE_VC_APPID="your_bytedance_vc_appid"
 ```
@@ -192,6 +210,9 @@ export BYTEDANCE_VC_APPID="your_bytedance_vc_appid"
 - AI Douyin 返回 `402 insufficient balance` 时，表示免费额度用完或余额不足，可在平台充值积分，或切换为自有 TikHub Token
 - `FW_MODEL_SIZE` / `FW_DEVICE` / `FW_COMPUTE_TYPE`：仅 `faster-whisper` 使用
 - `FW_PYTHON`：可选，指定安装了 `faster-whisper` 的 Python；留空时优先使用安装 helper 创建的默认 venv
+- `ATLASCLOUD_API_KEY`：仅 `atlascloud` 后端使用；不要写入仓库或日志
+- `ATLASCLOUD_ASR_MODEL`：可选，默认 `bytedance/seed-asr-2.0`；覆盖值需兼容同一 `audio_url` 请求结构
+- `ATLASCLOUD_API_BASE`：可选，默认 `https://api.atlascloud.ai/api/v1`
 - `BYTEDANCE_VC_TOKEN` / `BYTEDANCE_VC_APPID`：仅 `volcengine` 使用
 
 ## 使用方法
@@ -285,6 +306,7 @@ python3 ~/.codex/skills/video-to-subtitle-summary/scripts/list_ai_douyin_tasks.p
 | TikHub API（可选） | 使用自有 TikHub Token 时按 TikHub 套餐计费 |
 | YouTube 字幕抓取 | 无 API 费用，依赖本地 `yt-dlp` |
 | faster-whisper | 无 API 费用，消耗本地 CPU/GPU 计算资源 |
+| Atlas Cloud | 仅在 `ASR_BACKEND=atlascloud` 时按所选 ASR 模型计费 |
 | 火山引擎 VC | 仅在 `ASR_BACKEND=volcengine` 时产生字幕接口费用 |
 | Claude Code | 取决于你的订阅计划 |
 
@@ -305,12 +327,14 @@ video-to-subtitle-summary/
 │   ├── download_youtube_subtitles.py
 │   ├── install_faster_whisper.py
 │   ├── list_ai_douyin_tasks.py
+│   ├── transcribe_atlascloud.py
 │   └── transcribe_faster_whisper.py
 ├── tests/
 │   ├── test_download_video_candidates.py
 │   ├── test_download_youtube_subtitles.py
 │   ├── test_install_faster_whisper.py
 │   ├── test_list_ai_douyin_tasks.py
+│   ├── test_transcribe_atlascloud.py
 │   └── test_transcribe_faster_whisper.py
 └── docs/
     ├── ai-douyin-setup.md
