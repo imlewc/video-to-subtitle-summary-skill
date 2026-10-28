@@ -11,6 +11,14 @@ YouTube 链接会优先用 `yt-dlp` 直接抓取人工字幕或自动字幕，�
 
 [English](./README_en.md)
 
+## 复制给 Agent，一句话安装使用
+
+将下面这段话复制给 Codex / Claude Code 等能操作本地环境的 Agent，替换末尾的视频链接或文件路径即可：
+
+```text
+请安装并使用 https://github.com/imlewc/video-to-subtitle-summary-skill ，先阅读 README.md 和 SKILL.md，自动完成适合当前 agent 的安装、依赖检查和配置，默认使用本地 faster-whisper，已有安装和配置则直接复用；缺少 API Key 时再提示我填写，不要输出密钥。完成后提取以下视频的字幕并生成中文摘要、核心要点，提供字幕文件路径：〔视频链接或本地文件路径〕
+```
+
 ## 更新说明
 
 当前版本支持两种字幕转写后端：
