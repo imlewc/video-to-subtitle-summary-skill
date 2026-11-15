@@ -24,7 +24,7 @@ AI_DOUYIN_API_KEY=sk_xxx
 
 ## 计费规则
 
-调用 `POST /api/v1/video/download-url` 成功解析出下载直链后扣 1 积分；解析失败不扣。余额不足时接口返回 HTTP `402`，错误语义为 `insufficient balance`。
+调用 `POST /api/v1/video/download-url` 成功解析出下载直链后扣 10 积分；解析失败不扣。余额不足时接口返回 HTTP `402`，错误语义为 `insufficient balance`。
 
 ## 调用示例
 

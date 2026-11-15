@@ -31,7 +31,7 @@ YouTube 链接会优先用 `yt-dlp` 直接抓取人工字幕或自动字幕，�
 - 如果你更看重本地化与零 API 转写费用，保持默认即可
 - 如果你更偏好云端转写能力，切换环境变量即可
 
-> 抖音、小红书、B 站默认推荐使用 [AI Douyin](https://top9.cc) 解析下载直链：注册后可用免费额度试用，成功解析一次扣 1 积分。已有 TikHub 用户也可以改用自有 `TIKHUB_TOKEN`。YouTube 直接由 `yt-dlp` 抓字幕。ASR 字幕识别后端由 `ASR_BACKEND` 控制。
+> 抖音、小红书、B 站默认推荐使用 [AI Douyin](https://top9.cc) 解析下载直链：注册后可用免费额度试用，成功解析一次扣 10 积分。已有 TikHub 用户也可以改用自有 `TIKHUB_TOKEN`。YouTube 直接由 `yt-dlp` 抓字幕。ASR 字幕识别后端由 `ASR_BACKEND` 控制。
 
 ## 一键免部署方案
 
@@ -175,7 +175,7 @@ cp .env.example ~/.codex/skills/video-to-subtitle-summary/.env
 # 添加到 ~/.zshrc 或 ~/.bashrc
 export ASR_BACKEND="faster-whisper"
 
-# 默认推荐：AI Douyin 代理（成功解析下载直链后扣 1 积分）
+# 默认推荐：AI Douyin 代理（成功解析下载直链后扣 10 积分）
 export VIDEO_INFO_PROVIDER="ai-douyin"
 export AI_DOUYIN_API_BASE="https://top9.cc"
 export AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
@@ -195,7 +195,7 @@ export BYTEDANCE_VC_APPID="your_bytedance_vc_appid"
 说明：
 - `ASR_BACKEND`：可选，默认 `faster-whisper`
 - `VIDEO_INFO_PROVIDER`：可选，默认 `ai-douyin`；可改为 `tikhub`
-- `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY`：默认推荐的视频解析代理；抖音/小红书/B 站需要；YouTube 不需要；成功解析下载直链后扣 1 积分
+- `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY`：默认推荐的视频解析代理；抖音/小红书/B 站需要；YouTube 不需要；成功解析下载直链后扣 10 积分
 - `TIKHUB_TOKEN`：可选视频接口获取方案；当 `VIDEO_INFO_PROVIDER=tikhub` 或 AI Douyin 不可用时使用
 - AI Douyin 返回 `402 insufficient balance` 时，表示免费额度用完或余额不足，可在平台充值积分，或切换为自有 TikHub Token
 - `FW_MODEL_SIZE` / `FW_DEVICE` / `FW_COMPUTE_TYPE`：仅 `faster-whisper` 使用
@@ -289,7 +289,7 @@ python3 ~/.codex/skills/video-to-subtitle-summary/scripts/list_ai_douyin_tasks.p
 
 | 服务 | 费用 |
 |------|------|
-| AI Douyin 代理 | 新用户免费额度；成功解析下载直链后扣 1 积分，额度用完可充值 |
+| AI Douyin 代理 | 新用户免费额度；成功解析下载直链后扣 10 积分，额度用完可充值 |
 | TikHub API（可选） | 使用自有 TikHub Token 时按 TikHub 套餐计费 |
 | YouTube 字幕抓取 | 无 API 费用，依赖本地 `yt-dlp` |
 | faster-whisper | 无 API 费用，消耗本地 CPU/GPU 计算资源 |

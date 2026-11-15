@@ -30,7 +30,7 @@ YouTube 优先使用 `yt-dlp` 直接抓取人工字幕或自动字幕；只有�
 
 | 依赖 | 用途 | 必需 |
 | --- | --- | --- |
-| **AI Douyin API Key** | 推荐的视频解析/下载代理；注册后可用免费额度，成功解析下载直链后扣 1 积分 | 仅抖音/小红书/B 站需要 |
+| **AI Douyin API Key** | 推荐的视频解析/下载代理；注册后可用免费额度，成功解析下载直链后扣 10 积分 | 仅抖音/小红书/B 站需要 |
 | **TikHub API** | 可选高级/自托管方案：使用自己的 TikHub Token 直接解析 | 可选 |
 | **Python 3.9+** | 运行 `faster-whisper` helper | 仅 `ASR_BACKEND=faster-whisper` 时需要 |
 | **faster-whisper** | 本地语音转文字 | 仅 `ASR_BACKEND=faster-whisper` 时需要 |
@@ -231,7 +231,7 @@ fi
 
 #### 默认推荐：AI Douyin 代理
 
-AI Douyin 适合不想单独注册 TikHub 的用户。注册 [https://top9.cc](https://top9.cc) 后领取免费额度并创建 API Key，成功解析下载直链后扣 1 积分；失败不扣。余额不足时接口返回 HTTP `402` / `insufficient balance`。
+AI Douyin 适合不想单独注册 TikHub 的用户。注册 [https://top9.cc](https://top9.cc) 后领取免费额度并创建 API Key，成功解析下载直链后扣 10 积分；失败不扣。余额不足时接口返回 HTTP `402` / `insufficient balance`。
 
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
@@ -281,7 +281,7 @@ fi
 VIDEO_URL=$(jq -r '.download_url // empty' /tmp/video_analysis/download_url.json)
 VIDEO_URL_COUNT=$(jq -r '(.download_urls // [.download_url] | map(select(. != null and . != "")) | length)' /tmp/video_analysis/download_url.json)
 EXTRACTED_URL=$(jq -r '.extracted_url // empty' /tmp/video_analysis/download_url.json)
-DOWNLOAD_COST=$(jq -r '.cost // 1' /tmp/video_analysis/download_url.json)
+DOWNLOAD_COST=$(jq -r '.cost // 10' /tmp/video_analysis/download_url.json)
 [ -z "$VIDEO_URL" ] && echo "ERROR: 未返回 download_url" && cat /tmp/video_analysis/download_url.json && exit 1
 ```
 
