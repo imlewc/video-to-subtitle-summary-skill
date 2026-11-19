@@ -6,19 +6,21 @@ A Codex / Claude Code Skill that automatically converts short video platform (Do
 - **Online video:** Provide a video link → Auto-download video or fetch native subtitles → Generate subtitles → AI summary
 - **Local file:** Provide a local video/audio path → Extract audio (if needed) → Choose subtitle backend → Generate subtitles → AI summary
 
-The default subtitle backend is local `faster-whisper`, with optional support for Volcengine VC through environment variables.
+The default subtitle backend is local `faster-whisper`, with optional Atlas Cloud or Volcengine VC support through environment variables.
 YouTube links first use `yt-dlp` to fetch manual or automatic subtitles directly, without AI Douyin/TikHub, video download, or ASR by default.
 
 [中文文档](./README.md)
 
 ## Update Notes
 
-This version supports two subtitle backends:
+This version supports three subtitle backends:
 - **`faster-whisper`**: the default local option
+- **`atlascloud`**: an optional Atlas Cloud backend using Seed ASR 2.0
 - **`volcengine`**: an optional cloud backend using Volcengine VC
 
 That means:
 - You do not need a Volcengine account by default
+- `ATLASCLOUD_API_KEY` is only required when `ASR_BACKEND=atlascloud`
 - `BYTEDANCE_VC_TOKEN` and `BYTEDANCE_VC_APPID` are only required when `ASR_BACKEND=volcengine`
 - If you want local/private processing and no subtitle API fees, keep the default
 - If you prefer the cloud backend, switch the environment variable
@@ -69,6 +71,7 @@ and how individuals can seize opportunities in the AI era...
 | [AI Douyin](https://top9.cc) API Key | Recommended video parsing/download proxy; free trial quota for new users |
 | [TikHub](https://tikhub.io/) account | Optional video API provider if you want to use your own TikHub token |
 | Python 3.9+ + [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | Required when `ASR_BACKEND=faster-whisper` |
+| [Atlas Cloud](https://www.atlascloud.ai/) API Key | Required when `ASR_BACKEND=atlascloud` |
 | [Volcengine](https://www.volcengine.com/) account | Required when `ASR_BACKEND=volcengine` |
 
 ## Quick Start
@@ -87,6 +90,13 @@ Optional cloud backend:
 ASR_BACKEND=volcengine
 ```
 
+Optional Atlas Cloud backend:
+
+```bash
+ASR_BACKEND=atlascloud
+ATLASCLOUD_API_KEY=your_atlascloud_api_key
+```
+
 ### 2. Install dependencies for the selected backend
 
 **Option A: faster-whisper (default)**
@@ -100,6 +110,10 @@ python3 ~/.codex/skills/video-to-subtitle-summary/scripts/install_faster_whisper
 **Option B: Volcengine VC (optional)**
 
 Follow [docs/bytedance-vc-setup.md](./docs/bytedance-vc-setup.md) to enable the service and get your `APPID` and `Token`.
+
+**Option C: Atlas Cloud (optional)**
+
+No extra Python dependency is required. Configure `ATLASCLOUD_API_KEY` and run the included `scripts/transcribe_atlascloud.py`. The default model is `bytedance/seed-asr-2.0`.
 
 ### 2.5 Install FFmpeg
 
@@ -168,6 +182,10 @@ export FW_DEVICE="auto"
 export FW_COMPUTE_TYPE=""
 export FW_PYTHON=""
 
+export ATLASCLOUD_API_KEY="your_atlascloud_api_key"
+export ATLASCLOUD_ASR_MODEL="bytedance/seed-asr-2.0"
+export ATLASCLOUD_API_BASE="https://api.atlascloud.ai/api/v1"
+
 export BYTEDANCE_VC_TOKEN="your_bytedance_vc_token"
 export BYTEDANCE_VC_APPID="your_bytedance_vc_appid"
 ```
@@ -180,6 +198,9 @@ Notes:
 - AI Douyin returns `402 insufficient balance` when the free quota or credits are exhausted; recharge credits or switch to your own TikHub token
 - `FW_MODEL_SIZE` / `FW_DEVICE` / `FW_COMPUTE_TYPE`: used only by `faster-whisper`
 - `FW_PYTHON`: optional Python path with `faster-whisper` installed; leave empty to use the helper-created default venv first
+- `ATLASCLOUD_API_KEY`: used only by the `atlascloud` backend; never commit it or print it in logs
+- `ATLASCLOUD_ASR_MODEL`: optional, defaults to `bytedance/seed-asr-2.0`; overrides must use the same `audio_url` request shape
+- `ATLASCLOUD_API_BASE`: optional, defaults to `https://api.atlascloud.ai/api/v1`
 - `BYTEDANCE_VC_TOKEN` / `BYTEDANCE_VC_APPID`: used only by `volcengine`
 
 ## Usage
@@ -273,6 +294,7 @@ The script reads `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY` from the skill `.env
 | TikHub API | Charged by your TikHub plan when using your own TikHub token |
 | YouTube subtitle fetch | No API fee, uses local `yt-dlp` |
 | faster-whisper | No API fee, uses local CPU/GPU resources |
+| Atlas Cloud | Billed by the selected ASR model only when `ASR_BACKEND=atlascloud` |
 | Volcengine VC | Subtitle API fees apply only when `ASR_BACKEND=volcengine` |
 | Codex / Claude Code | Depends on your subscription plan |
 
@@ -293,12 +315,14 @@ video-to-subtitle-summary/
 │   ├── download_youtube_subtitles.py
 │   ├── install_faster_whisper.py
 │   ├── list_ai_douyin_tasks.py
+│   ├── transcribe_atlascloud.py
 │   └── transcribe_faster_whisper.py
 ├── tests/
 │   ├── test_download_video_candidates.py
 │   ├── test_download_youtube_subtitles.py
 │   ├── test_install_faster_whisper.py
 │   ├── test_list_ai_douyin_tasks.py
+│   ├── test_transcribe_atlascloud.py
 │   └── test_transcribe_faster_whisper.py
 └── docs/
     ├── ai-douyin-setup.md
