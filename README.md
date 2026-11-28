@@ -1,322 +1,152 @@
 # video-to-subtitle-summary
 
-一个 Codex / Claude Code Skill，自动将短视频平台（抖音、小红书、B 站、YouTube 等）视频或本地视频/音频文件转换为字幕文本并生成 AI 摘要。
-
-**核心流程：**
-- **在线视频：** 提供视频链接 → 自动下载视频或直接抓字幕 → 生成字幕 → AI 总结
-- **本地文件：** 提供本地视频/音频路径 → 提取音频（如需） → 选择字幕后端 → 生成字幕 → AI 总结
-
-默认字幕后端是本地 `faster-whisper`，也支持通过环境变量切换到火山引擎 VC。
-YouTube 链接会优先用 `yt-dlp` 直接抓取人工字幕或自动字幕，不需要 AI Douyin/TikHub，也不会默认下载视频或跑 ASR。
+一个 **Codex / Claude Code Skill**，基于 **[i琢片（top9.cc）](https://top9.cc/?utm_source=github&utm_medium=readme&utm_campaign=video-to-subtitle-summary)** 将抖音、小红书、B 站、X/Twitter、YouTube 视频与本地音视频自动转换为文字稿、SRT 字幕、AI 摘要与**抖音评论区洞察**，并支持**抖音对标博主主页批量拆解**。
 
 [English](./README_en.md)
 
+## 不想折腾本地环境？直接用在线版
+
+如果你不是开发者，或只想粘贴链接马上出结果，无需安装任何软件：
+- **网页版**：直接打开 [https://top9.cc](https://top9.cc/?utm_source=github&utm_medium=readme_online&utm_campaign=video-to-subtitle-summary)，注册即送 **100 积分**
+- **微信小程序**：微信搜索「**琢片**」，粘贴抖音/小红书/B 站链接即可提取字幕、摘要与下载直链
+
 ## 复制给 Agent，一句话安装使用
 
-将下面这段话复制给 Codex / Claude Code 等能操作本地环境的 Agent，替换末尾的视频链接或文件路径即可：
+将下面这段话复制给 Codex / Claude Code 等能操作本地环境的 Agent，替换末尾的链接即可：
 
 ```text
-请安装并使用 https://github.com/imlewc/video-to-subtitle-summary-skill ，先阅读 README.md 和 SKILL.md，自动完成适合当前 agent 的安装、依赖检查和配置，默认使用本地 faster-whisper，已有安装和配置则直接复用；缺少 API Key 时再提示我填写，不要输出密钥。完成后提取以下视频的字幕并生成中文摘要、核心要点，提供字幕文件路径：〔视频链接或本地文件路径〕
+请安装并使用 https://github.com/imlewc/video-to-subtitle-summary-skill ，先阅读 README.md 和 SKILL.md，完成配置后帮我处理以下链接（默认使用 i琢片 https://top9.cc/?utm_source=github&utm_medium=readme_prompt&utm_campaign=video-to-subtitle-summary 的 API Key；如果是抖音博主主页就拉取近期作品并拆解爆款，如果是单条视频就提取字幕、摘要与评论洞察；缺少 API Key 时再提示我填写，不要输出密钥）：〔视频链接或抖音博主主页链接〕
 ```
 
-## 更新说明
+## 核心能力
 
-当前版本支持两种字幕转写后端：
-- **`faster-whisper`**：默认方案，本地转写，不依赖火山引擎
-- **`volcengine`**：可选方案，使用火山引擎音视频字幕服务
+| 能力 | 适用场景 | 依赖要求 | 计费（1 元 = 100 积分） |
+| --- | --- | --- | --- |
+| **云端一站式分析（推荐）** | 抖音/小红书/B 站/X 视频摘要、完整转录、**抖音评论区痛点洞察** | 仅需 Python 3 + `AI_DOUYIN_API_KEY`（**免装 FFmpeg / Whisper**） | **10 积分/分钟**（最低 10 积分；抖音评论洞察 +10 积分） |
+| **抖音博主主页批量获取** | 拉取对标博主最新/最热作品列表与点赞/评论数据，批量拆解口播 | 仅需 Python 3 + `AI_DOUYIN_API_KEY` | **5 积分/次** |
+| **直链解析 + 本地 SRT** | 需要导出可编辑 `.srt` 字幕、剪辑对齐、或本地 `.mp4`/`.mp3` 转写 | Python 3 + FFmpeg + `faster-whisper` | 在线直链解析 **10 积分/次**；本地文件无 API 费用 |
+| **YouTube 字幕直抓** | 抓取 YouTube 人工/自动字幕并总结 | `yt-dlp` | 无 API 费用 |
 
-这意味着：
-- 默认情况下不需要注册和开通火山引擎
-- 只有在 `ASR_BACKEND=volcengine` 时，才需要配置 `BYTEDANCE_VC_TOKEN` 和 `BYTEDANCE_VC_APPID`
-- 如果你更看重本地化与零 API 转写费用，保持默认即可
-- 如果你更偏好云端转写能力，切换环境变量即可
+> 新用户注册 [i琢片（top9.cc）](https://top9.cc/?utm_source=github&utm_medium=readme&utm_campaign=video-to-subtitle-summary) 即送 **100 积分**；充值满 20/50/100 元分别加赠 5%/7%/10%，支持开具电子发票。
 
-> 抖音、小红书、B 站默认推荐使用 [AI Douyin](https://top9.cc) 解析下载直链：注册后可用免费额度试用，成功解析一次扣 10 积分。已有 TikHub 用户也可以改用自有 `TIKHUB_TOKEN`。YouTube 直接由 `yt-dlp` 抓字幕。ASR 字幕识别后端由 `ASR_BACKEND` 控制。
+## 快速开始
 
-## 一键免部署方案
+### 1. 获取 i琢片 API Key（处理抖音/小红书/B 站/X 必需）
 
-不想本地安装和配置环境时，可直接使用在线版本：
-
-- [https://top9.cc](https://top9.cc)
-
-## 私有化部署支持
-
-支持程序私有化部署，可落地到企业服务器或内网环境，满足数据隔离与合规要求。
-
-如需私有化部署方案、技术支持或商务合作，请联系：`eyr8odvl1i@163.com`
-
-## 效果展示
-
-输入一个视频链接或本地文件路径，自动输出：
-
-```markdown
-## 视频分析结果
-
-### 视频信息
-| 项目 | 内容 |
-|------|------|
-| 视频ID | 7456789012345 |
-| 作者 | 某知识博主 |
-| 时长 | 3:25 |
-
-### AI生成标题
-深度解析 2024 年 AI 发展趋势与个人应对策略
-
-### AI摘要
-视频主要讨论了 2024 年 AI 技术的发展趋势，包括大模型的演进方向、
-AI 在各行业的落地应用，以及普通人如何把握 AI 时代的机遇...
-
-### 核心要点
-1. 大模型正在从“通用智能”向“专业智能”演进
-2. AI 应用层的创业机会远大于基础模型层
-3. 掌握 AI 工具使用能力将成为职场核心竞争力
-
-### 生成文件
-- 视频: /tmp/video_analysis/7456789012345/video.mp4
-- 音频: /tmp/video_analysis/7456789012345/audio.mp3
-- SRT字幕: /tmp/video_analysis/7456789012345/subtitle.srt
-- 纯文本: /tmp/video_analysis/7456789012345/text.txt
-```
-
-## 前置条件
-
-| 依赖 | 说明 |
-|------|------|
-| Codex 或 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | 支持本地 Skill 的 Agent 环境 |
-| [FFmpeg](https://ffmpeg.org/) | 音视频处理工具 |
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | 视频下载和 YouTube 字幕抓取工具（B 站 / YouTube 需要） |
-| [AI Douyin](https://top9.cc) API Key | 推荐的视频解析/下载代理；新用户免费额度，可避免单独注册 TikHub |
-| [TikHub](https://tikhub.io/) 账号 | 可选视频接口获取方案：自带 Token 直接解析抖音/小红书/B 站 |
-| Python 3.9+ + [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | 当 `ASR_BACKEND=faster-whisper` 时需要 |
-| [火山引擎](https://www.volcengine.com/) 账号 | 当 `ASR_BACKEND=volcengine` 时需要 |
-
-## 快速安装
-
-### 1. 选择字幕后端
-
-默认推荐 `faster-whisper`：
+1. 打开 [https://top9.cc](https://top9.cc/?utm_source=github&utm_medium=readme_setup&utm_campaign=video-to-subtitle-summary) 注册/登录并完成邮箱验证。
+2. 在 [API 密钥管理](https://top9.cc/api-keys?utm_source=github&utm_medium=readme_setup&utm_campaign=video-to-subtitle-summary) 创建一个 Key。
+3. 复制 Skill 到 Codex / Claude Code 并配置 `.env`：
 
 ```bash
-ASR_BACKEND=faster-whisper
+git clone https://github.com/imlewc/video-to-subtitle-summary-skill.git video-to-subtitle-summary
+
+# Codex
+mkdir -p ~/.codex/skills && cp -r video-to-subtitle-summary ~/.codex/skills/video-to-subtitle-summary
+
+# Claude Code
+mkdir -p ~/.claude/skills && cp -r video-to-subtitle-summary ~/.claude/skills/video-to-subtitle-summary
+
+cp ~/.codex/skills/video-to-subtitle-summary/.env.example ~/.codex/skills/video-to-subtitle-summary/.env
+# 在 .env 中填入 AI_DOUYIN_API_KEY="sk_xxx"
 ```
 
-如需使用火山引擎：
+### 2. （可选）仅当你需要在本地生成 `.srt` 或处理本地文件时安装
 
-```bash
-ASR_BACKEND=volcengine
-```
-
-### 2. 按后端安装依赖
-
-**方案 A：faster-whisper（默认）**
+- **FFmpeg**（本地视频提取音频）：`brew install ffmpeg`（macOS） / `sudo apt install ffmpeg`（Ubuntu）
+- **yt-dlp**（B 站备用 / YouTube 字幕）：`brew install yt-dlp` 或 `python3 -m pip install -U yt-dlp`
+- **faster-whisper**（本地语音转文字）：
 
 ```bash
 python3 ~/.codex/skills/video-to-subtitle-summary/scripts/install_faster_whisper.py
 ```
 
-> 安装 helper 会先测速 PyPI 镜像，选择最快可用源，再创建独立 venv 安装。默认按 CPU 路径运行；检测到 NVIDIA/CUDA 时会自动切到 GPU。Apple Silicon 会继续走 CPU 路径。GPU 安装细节见 [docs/faster-whisper-setup.md](./docs/faster-whisper-setup.md)。
+## 常用工作流示例
 
-**方案 B：火山引擎 VC（可选）**
-
-按照 [docs/bytedance-vc-setup.md](./docs/bytedance-vc-setup.md) 开通服务并获取 `APPID` / `Token`。
-
-### 2.5 安装 FFmpeg
+### 1. 零本地依赖：云端分析单条视频（含抖音评论洞察）
 
 ```bash
-# macOS
-brew install ffmpeg
-
-# Ubuntu / Debian
-sudo apt install ffmpeg
-
-# Windows (使用 Chocolatey)
-choco install ffmpeg
+python3 ~/.codex/skills/video-to-subtitle-summary/scripts/analyze_video_cloud.py \
+  "https://v.douyin.com/xxxxxx/" \
+  --output-dir /tmp/video_analysis/demo
 ```
 
-### 2.8 安装 yt-dlp（B 站 / YouTube 需要）
+直接向 Codex / Claude Code 发链接即可：
+
+```text
+用云端模式帮我拆解这条抖音视频，并重点总结评论区痛点：https://v.douyin.com/xxxxxx/
+```
+
+### 2. 抖音对标博主主页批量拆解
 
 ```bash
-# macOS
-brew install yt-dlp
-
-# 通用（需要 Python）
-python3 -m pip install -U yt-dlp
+python3 ~/.codex/skills/video-to-subtitle-summary/scripts/fetch_douyin_user_posts.py \
+  "https://www.douyin.com/user/MS4wLjABAAAA..." \
+  --count 10 \
+  --sort-type 1
 ```
 
-### 3. 复制 Skill 到 Codex / Claude Code
+也可以直接告诉 Agent：
+
+```text
+拉取这个抖音博主最热的 10 条视频，挑点赞最高的 3 条做云端拆解，整理开头钩子和话术结构：https://www.douyin.com/user/MS4wLjABAAAA...
+```
+
+### 3. 本地转写导出 `.srt` 字幕（在线链接或本地文件）
+
+```text
+请帮我提取这个小红书视频的 SRT 字幕并总结重点：https://www.xiaohongshu.com/explore/xxxxxx
+```
+
+```text
+/video-to-subtitle-summary /Users/me/Downloads/video.mp4
+```
+
+### 4. 查询自己的 i琢片历史任务
 
 ```bash
-# 克隆仓库
-git clone https://github.com/imlewc/video-to-subtitle-summary-skill.git video-to-subtitle-summary
-
-# Codex
-mkdir -p ~/.codex/skills
-cp -r video-to-subtitle-summary ~/.codex/skills/video-to-subtitle-summary
-
-# Claude Code
-mkdir -p ~/.claude/skills
-cp -r video-to-subtitle-summary ~/.claude/skills/video-to-subtitle-summary
+python3 ~/.codex/skills/video-to-subtitle-summary/scripts/list_ai_douyin_tasks.py --page 1 --page-size 20
 ```
 
-### 4. 配置环境变量
-
-如需处理抖音、小红书或 B 站，推荐注册 [AI Douyin](https://top9.cc) 并创建 API Key；YouTube 不需要视频解析代理。已有 TikHub 用户可改用自有 TikHub Token。然后配置你要使用的字幕后端。
-
-**方式一：使用 .env 文件（推荐）**
-
-```bash
-cp .env.example ~/.codex/skills/video-to-subtitle-summary/.env
-# 编辑 .env 文件填入你的配置
-```
-
-**方式二：写入 Shell 配置**
-
-```bash
-# 添加到 ~/.zshrc 或 ~/.bashrc
-export ASR_BACKEND="faster-whisper"
-
-# 默认推荐：AI Douyin 代理（成功解析下载直链后扣 10 积分）
-export VIDEO_INFO_PROVIDER="ai-douyin"
-export AI_DOUYIN_API_BASE="https://top9.cc"
-export AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
-
-# 可选视频接口获取方案：自有 TikHub Token
-export TIKHUB_TOKEN=""
-
-export FW_MODEL_SIZE="small"
-export FW_DEVICE="auto"
-export FW_COMPUTE_TYPE=""
-export FW_PYTHON=""
-
-export BYTEDANCE_VC_TOKEN="your_bytedance_vc_token"
-export BYTEDANCE_VC_APPID="your_bytedance_vc_appid"
-```
-
-说明：
-- `ASR_BACKEND`：可选，默认 `faster-whisper`
-- `VIDEO_INFO_PROVIDER`：可选，默认 `ai-douyin`；可改为 `tikhub`
-- `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY`：默认推荐的视频解析代理；抖音/小红书/B 站需要；YouTube 不需要；成功解析下载直链后扣 10 积分
-- `TIKHUB_TOKEN`：可选视频接口获取方案；当 `VIDEO_INFO_PROVIDER=tikhub` 或 AI Douyin 不可用时使用
-- AI Douyin 返回 `402 insufficient balance` 时，表示免费额度用完或余额不足，可在平台充值积分，或切换为自有 TikHub Token
-- `FW_MODEL_SIZE` / `FW_DEVICE` / `FW_COMPUTE_TYPE`：仅 `faster-whisper` 使用
-- `FW_PYTHON`：可选，指定安装了 `faster-whisper` 的 Python；留空时优先使用安装 helper 创建的默认 venv
-- `BYTEDANCE_VC_TOKEN` / `BYTEDANCE_VC_APPID`：仅 `volcengine` 使用
-
-## 使用方法
-
-### 在线视频
-
-在 Claude Code 中直接发送视频链接即可（支持抖音、小红书、B 站、YouTube 等）：
-
-```
-请帮我提取这个视频的字幕并总结：https://v.douyin.com/xxxxxx/
-```
-
-```
-请帮我总结这个小红书视频：https://www.xiaohongshu.com/explore/xxxxxx
-```
-
-```
-请帮我总结这个B站视频：https://www.bilibili.com/video/BVxxxxxxxxxx/
-```
-
-```
-请帮我总结这个 YouTube 视频：https://www.youtube.com/watch?v=O87FdYIPeQk
-```
-
-或者使用 skill 命令：
-
-```
-/video-to-subtitle-summary https://v.douyin.com/xxxxxx/
-```
-
-### 本地文件
-
-直接提供本地视频或音频文件路径：
-
-```
-请帮我提取字幕并总结：/Users/me/Downloads/video.mp4
-```
-
-```
-/video-to-subtitle-summary ~/Desktop/recording.mp3
-```
-
-> 本地文件模式会自动跳过视频下载步骤，音频文件还会跳过音频提取步骤，无需 AI Douyin/TikHub 视频解析代理。
-
-### YouTube 字幕直抓
-
-YouTube 链接优先执行：
-
-```bash
-python3 ~/.codex/skills/video-to-subtitle-summary/scripts/download_youtube_subtitles.py \
-  "https://www.youtube.com/watch?v=O87FdYIPeQk" \
-  --output-dir /tmp/video_analysis/O87FdYIPeQk \
-  --languages zh-Hans,zh-Hant,zh,en
-```
-
-生成 `/tmp/video_analysis/O87FdYIPeQk/subtitle.srt` 和 `/tmp/video_analysis/O87FdYIPeQk/text.txt`。如果视频没有可抓取字幕，再回退到下载音频并使用 `ASR_BACKEND` 转写。
-
-### 查看自己的 AI Douyin 历史任务
-
-已配置 `AI_DOUYIN_API_KEY` 后，可以查询当前 API Key 对应用户的历史任务：
-
-```bash
-python3 ~/.codex/skills/video-to-subtitle-summary/scripts/list_ai_douyin_tasks.py \
-  --page 1 \
-  --page-size 20
-```
-
-可选筛选：
-
-```bash
-python3 ~/.codex/skills/video-to-subtitle-summary/scripts/list_ai_douyin_tasks.py --status completed
-python3 ~/.codex/skills/video-to-subtitle-summary/scripts/list_ai_douyin_tasks.py --search "关键词" --json
-```
-
-该脚本默认读取 skill 目录 `.env` 或环境变量中的 `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY`，调用 `GET /api/v1/tasks`，只返回当前用户自己的任务。
-
-## 安装指南
+## 安装与技术文档
 
 | 项目 | 文档 |
-|------|------|
-| AI Douyin 代理 | [配置指南](./docs/ai-douyin-setup.md) |
-| TikHub API（可选视频接口获取方案） | [申请教程](./docs/tikhub-setup.md) |
-| faster-whisper 运行时 | [安装指南](./docs/faster-whisper-setup.md) |
-| 火山引擎 VC | [开通教程](./docs/bytedance-vc-setup.md) |
+| --- | --- |
+| i琢片 API 配置与计费 | [配置指南](./docs/ai-douyin-setup.md) |
+| faster-whisper 本地运行时 | [安装指南](./docs/faster-whisper-setup.md) |
+| 火山引擎 VC（可选 ASR） | [开通教程](./docs/bytedance-vc-setup.md) |
 
-## 费用说明
+## 私有化部署支持
 
-| 服务 | 费用 |
-|------|------|
-| AI Douyin 代理 | 新用户免费额度；成功解析下载直链后扣 10 积分，额度用完可充值 |
-| TikHub API（可选） | 使用自有 TikHub Token 时按 TikHub 套餐计费 |
-| YouTube 字幕抓取 | 无 API 费用，依赖本地 `yt-dlp` |
-| faster-whisper | 无 API 费用，消耗本地 CPU/GPU 计算资源 |
-| 火山引擎 VC | 仅在 `ASR_BACKEND=volcengine` 时产生字幕接口费用 |
-| Claude Code | 取决于你的订阅计划 |
+支持程序私有化部署，可落地到企业服务器或内网环境，满足数据隔离与合规要求。如需私有化部署方案、技术支持或商务合作，请联系：`eyr8odvl1i@163.com`
 
-> 默认方案 `faster-whisper` 不会产生火山字幕接口费用。
-> 首次运行 `faster-whisper` 会下载模型文件，之后会复用本地缓存。
+## 高级自托管选项（可选）
+
+如果你已有自有 TikHub Token 或火山引擎 VC 账号，可在 `.env` 中切换 `VIDEO_INFO_PROVIDER=tikhub` 或 `ASR_BACKEND=volcengine`（参考 [TikHub 申请教程](./docs/tikhub-setup.md) 与 [火山引擎开通教程](./docs/bytedance-vc-setup.md)）。注意自托管链路仅提供基础单条视频解析，不包含云端分析、抖音博主批量拉取、评论洞察与任务归档。
 
 ## 项目结构
 
 ```text
 video-to-subtitle-summary/
-├── README.md                     # 项目介绍（本文件）
-├── README_en.md                  # English README
-├── LICENSE                       # MIT 协议
-├── SKILL.md                      # Skill 本体
-├── .env.example                  # 环境变量模板
+├── README.md
+├── README_en.md
+├── LICENSE
+├── SKILL.md
+├── .env.example
 ├── scripts/
+│   ├── ai_douyin_client.py
+│   ├── analyze_video_cloud.py
 │   ├── download_video_candidates.py
 │   ├── download_youtube_subtitles.py
+│   ├── fetch_douyin_user_posts.py
 │   ├── install_faster_whisper.py
 │   ├── list_ai_douyin_tasks.py
 │   └── transcribe_faster_whisper.py
 ├── tests/
+│   ├── test_ai_douyin_client.py
+│   ├── test_analyze_video_cloud.py
 │   ├── test_download_video_candidates.py
 │   ├── test_download_youtube_subtitles.py
+│   ├── test_fetch_douyin_user_posts.py
 │   ├── test_install_faster_whisper.py
 │   ├── test_list_ai_douyin_tasks.py
 │   └── test_transcribe_faster_whisper.py

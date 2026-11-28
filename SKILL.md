@@ -1,57 +1,52 @@
 ---
 name: video-to-subtitle-summary
-description: Use when user provides a short video platform URL or local video/audio file and wants subtitles/AI summary, or when user asks to list their own AI Douyin historical tasks. Triggers on v.douyin.com, xhslink.com, bilibili.com, b23.tv, YouTube URLs, local .mp4/.mp3/.wav files, or task history requests.
-args: <video_url_or_file_path> - 视频链接（抖音/小红书/B站等）或本地视频/音频文件路径（必需）
+description: Use when user provides a short video platform URL (Douyin, Xiaohongshu, Bilibili, X/Twitter, YouTube), a Douyin creator homepage URL/sec_user_id for batch post analysis, a local video/audio file, or asks for cloud video analysis, Douyin comment insights, or AI Douyin task history.
+args: <video_url_or_creator_url_or_file_path> - 视频链接、抖音博主主页链接或本地视频/音频文件路径（必需）
 ---
 
-# 视频转字幕与 AI 总结技能
+# 视频转字幕、评论洞察与 AI 总结技能
 
 ## Overview
 
-将短视频平台（抖音、小红书、B 站、YouTube 等）视频或本地视频/音频文件转换为字幕文本并生成 AI 摘要。
+面向抖音、小红书、B 站、X/Twitter、YouTube 视频与本地音视频的自动化拆解技能，核心围绕 **[i琢片（top9.cc）](https://top9.cc/?utm_source=skill&utm_medium=skill_doc&utm_campaign=video-to-subtitle-summary)** 提供三种核心工作流：
 
-**核心流程：**
-- **在线视频：** 获取视频信息 → 下载视频/直接抓字幕 → 选择字幕后端 → 生成字幕 → AI 总结
-- **本地文件：** 提取音频（如需） → 选择字幕后端 → 生成字幕 → AI 总结
+1. **云端一站式分析（零本地依赖，推荐快速出结果 / 抖音评论洞察）**：调用 `scripts/analyze_video_cloud.py`（`POST /api/v1/analysis` + 轮询 `GET /api/v1/analysis/:id`），免装 FFmpeg 和 `faster-whisper`，直接输出 AI 摘要、完整字幕和**抖音评论区洞察**。
+2. **抖音博主主页批量拆解**：调用 `scripts/fetch_douyin_user_posts.py`（`POST /api/v1/douyin/user-post-videos`），按最新或最热拉取博主近期作品列表与数据，再批量对爆款视频做云端分析或本地转写。
+3. **直链解析 + 本地/云端字幕转写**：调用 i琢片 `POST /api/v1/video/download-url` 解析抖音/小红书/B 站直链下载到本地，再走默认 `faster-whisper` 或 `volcengine` 出 `.srt` 与 `.txt`，最后由 Agent 总结。
 
-默认使用本地 `faster-whisper`，也支持通过环境变量切换到火山引擎 VC API。
-YouTube 优先使用 `yt-dlp` 直接抓取人工字幕或自动字幕；只有没有可用字幕时，才需要下载音视频并回退到 ASR。
+YouTube 链接优先使用 `yt-dlp` 直接抓取原生或自动字幕；本地音视频跳过直链解析。
 
 ## When to Use
 
-- 用户提供短视频平台链接（抖音、小红书、B 站、YouTube 等），要求提取字幕或生成总结
-- 用户提供本地视频/音频文件路径，要求转字幕或生成总结
-- 用户要求查看自己的 AI Douyin 历史任务、最近任务、任务列表
-- 需要将视频内容转为文字
+- 用户提供抖音、小红书、B 站、X/Twitter 或 YouTube 链接，要求提取口播文案、字幕、AI 摘要或分析评论区痛点
+- 用户提供抖音博主主页链接 / `sec_user_id`，要求拉取近期作品列表或批量拆解对标账号爆款
+- 用户本机未安装 FFmpeg / `faster-whisper`，或明确要求快速云端分析（`cloud` / 免本地环境）
+- 用户提供本地视频/音频文件路径，要求转写为 `.srt` / `.txt` 并总结
+- 用户要求查看自己的 i琢片（AI Douyin）历史分析任务
 
 **不适用于：** 实时语音识别、直播字幕
 
-## 外部依赖
+## 外部依赖与计费
 
 | 依赖 | 用途 | 必需 |
 | --- | --- | --- |
-| **AI Douyin API Key** | 推荐的视频解析/下载代理；注册后可用免费额度，成功解析下载直链后扣 10 积分 | 仅抖音/小红书/B 站需要 |
-| **TikHub API** | 可选高级/自托管方案：使用自己的 TikHub Token 直接解析 | 可选 |
-| **Python 3.9+** | 运行 `faster-whisper` helper | 仅 `ASR_BACKEND=faster-whisper` 时需要 |
-| **faster-whisper** | 本地语音转文字 | 仅 `ASR_BACKEND=faster-whisper` 时需要 |
-| **字节跳动 VC API** | 云端语音转文字 | 仅 `ASR_BACKEND=volcengine` 时需要 |
-| **FFmpeg** | 从视频提取音频 | ✅（音频文件可跳过） |
-| **yt-dlp** | 下载 B 站视频；抓取 YouTube 字幕 | 仅 B 站或 YouTube 需要 |
-| **jq** | 解析 AI Douyin/TikHub JSON 响应 | 在线视频模式需要 |
+| **AI Douyin API Key** | 抖音/小红书/B站直链解析（10 积分/次）、抖音主页作品列表（5 积分/次）、云端分析（10 积分/分钟，抖音自动附带评论洞察 +10 积分）。注册送 100 积分，[注册获取](https://top9.cc/?utm_source=skill&utm_medium=skill_doc&utm_campaign=video-to-subtitle-summary) | 在线解析 / 主页批量 / 云端分析必需 |
+| **Python 3.9+** | 运行 `scripts/*.py` 与 `faster-whisper` helper | ✅ |
+| **jq / curl** | 本地直链解析脚本与 JSON 提取 | 本地解析路径需要 |
+| **FFmpeg / faster-whisper** | 本地提取音频与语音转文字（走云端模式 `analyze_video_cloud.py` 时可免装） | 仅本地转写路径需要 |
+| **yt-dlp** | 抓取 YouTube 字幕；B 站备用下载 | 仅 B 站备用或 YouTube 需要 |
+| **字节跳动 VC API** | 云端火山引擎 ASR | 仅 `ASR_BACKEND=volcengine` 时需要 |
 
 ## 环境变量
 
-通过环境变量读取，支持以下任意方式配置：
-
-**方式一：.env 文件（推荐）** — 在 skill 目录下创建 `.env` 文件：
+支持 `.env` 文件或 Shell 环境变量（推荐在 Skill 目录下创建 `.env`）：
 
 ```bash
-ASR_BACKEND="faster-whisper"
 VIDEO_INFO_PROVIDER="ai-douyin"
 AI_DOUYIN_API_BASE="https://top9.cc"
 AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
-TIKHUB_TOKEN=""
 
+ASR_BACKEND="faster-whisper"
 FW_MODEL_SIZE="small"
 FW_DEVICE="auto"
 FW_COMPUTE_TYPE=""
@@ -59,83 +54,23 @@ FW_PYTHON=""
 
 BYTEDANCE_VC_TOKEN="your_token"
 BYTEDANCE_VC_APPID="your_appid"
+TIKHUB_TOKEN=""
 ```
 
-**方式二：Shell 配置** — 添加到 `~/.zshrc` 或 `~/.bashrc`：
-
-```bash
-export ASR_BACKEND="faster-whisper"
-export VIDEO_INFO_PROVIDER="ai-douyin"
-export AI_DOUYIN_API_BASE="https://top9.cc"
-export AI_DOUYIN_API_KEY="your_ai_douyin_api_key"
-export TIKHUB_TOKEN=""
-
-export FW_MODEL_SIZE="small"
-export FW_DEVICE="auto"
-export FW_COMPUTE_TYPE=""
-export FW_PYTHON=""
-
-export BYTEDANCE_VC_TOKEN="your_token"
-export BYTEDANCE_VC_APPID="your_appid"
-```
-
-说明：
-- `ASR_BACKEND`：可选，默认 `faster-whisper`
-- `VIDEO_INFO_PROVIDER`：可选，默认 `ai-douyin`；可改为 `tikhub` 使用自有 TikHub Token
-- `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY`：推荐的视频解析代理；抖音/小红书/B 站需要；YouTube 不需要
-- `TIKHUB_TOKEN`：可选高级/自托管方案；当 `VIDEO_INFO_PROVIDER=tikhub` 时需要
-- `FW_MODEL_SIZE` / `FW_DEVICE` / `FW_COMPUTE_TYPE`：仅 `faster-whisper` 后端使用
-- `FW_PYTHON`：可选，指定安装了 `faster-whisper` 的 Python；留空时优先使用安装 helper 创建的默认 venv，再回退系统 `python3`
-- `BYTEDANCE_VC_TOKEN` / `BYTEDANCE_VC_APPID`：仅 `volcengine` 后端使用
-
-> 安装与运行时说明见 [AI Douyin 配置指南](./docs/ai-douyin-setup.md)、[TikHub 申请指南](./docs/tikhub-setup.md)、[faster-whisper 安装指南](./docs/faster-whisper-setup.md) 和 [火山引擎开通指南](./docs/bytedance-vc-setup.md)
+> 安装与配置细节见 [AI Douyin 配置指南](./docs/ai-douyin-setup.md) 与 [faster-whisper 安装指南](./docs/faster-whisper-setup.md)。
 
 ## 执行步骤
 
-### 步骤 0：判断输入类型
+### 步骤 0：判断意图与工作流模式
 
-根据用户输入判断处理模式：
+先根据用户输入选择模式：
 
-- **在线视频模式**：输入为 URL
-  - **抖音/TikTok**：`douyin.com`、`v.douyin.com`、`tiktok.com`
-  - **小红书**：`xiaohongshu.com`、`xhslink.com`
-  - **B 站**：`bilibili.com`、`b23.tv`
-  - **YouTube**：`youtube.com`、`youtu.be`
-- **本地文件模式**：输入为本地文件路径
-  - 本地**视频**文件（`.mp4`、`.mov`、`.avi`、`.mkv` 等）→ 从步骤 3（提取音频）开始
-  - 本地**音频**文件（`.mp3`、`.wav`、`.m4a`、`.flac` 等）→ 跳过步骤 3，直接从步骤 4（转写）开始
+1. **抖音博主主页批量拆解模式**：输入包含 `/user/` 主页链接、抖音用户分享文本、`sec_user_id`，或用户要求“拉取/拆解某博主近期/最热视频” → 执行 **步骤 1A**，再根据用户选定（或最热的 N 条）视频走 **步骤 1B（云端）** 或 **步骤 1C + 2–5（本地 SRT）**。
+2. **云端一站式分析模式**（推荐场景：用户需要**抖音评论洞察**、X/Twitter 视频分析、本地未装 FFmpeg/`faster-whisper`，或想快速出摘要与全文而无需 `.srt` 文件）→ 执行 **步骤 1B**。
+3. **本地转写 + 总结模式**（用户明确需要可编辑 `.srt` 字幕文件、处理本地音视频文件，或本机已就绪 `faster-whisper` 且偏好本地导出）→ 执行 **步骤 0.6** 后按 **步骤 1C → 2 → 3 → 4 → 5**。
+4. **历史任务查询**：用户查看个人历史任务 → 执行 **步骤 1.5**。
 
-### 步骤 0.5：读取后端配置
-
-先读取 `ASR_BACKEND`，未配置时默认使用 `faster-whisper`：
-
-```bash
-SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
-[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.claude/skills/video-to-subtitle-summary"
-ENV_FILE="$SKILL_DIR/.env"
-
-read_env() {
-  local key="$1"
-  if [ -f "$ENV_FILE" ]; then
-    grep "^${key}=" "$ENV_FILE" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'"
-  else
-    printenv "$key"
-  fi
-}
-
-ASR_BACKEND="$(read_env ASR_BACKEND)"
-[ -z "$ASR_BACKEND" ] && ASR_BACKEND="faster-whisper"
-
-echo "ASR_BACKEND=$ASR_BACKEND"
-```
-
-支持值：
-- `faster-whisper`
-- `volcengine`
-
-### 步骤 0.6：环境检查（必须首先执行）
-
-在开始任何处理之前，先检查当前模式和当前字幕后端需要的依赖。
+### 步骤 0.5：读取配置
 
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
@@ -155,8 +90,31 @@ ASR_BACKEND="$(read_env ASR_BACKEND)"
 [ -z "$ASR_BACKEND" ] && ASR_BACKEND="faster-whisper"
 VIDEO_INFO_PROVIDER="$(read_env VIDEO_INFO_PROVIDER)"
 [ -z "$VIDEO_INFO_PROVIDER" ] && VIDEO_INFO_PROVIDER="ai-douyin"
-AI_DOUYIN_API_BASE="$(read_env AI_DOUYIN_API_BASE)"
-[ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://top9.cc"
+```
+
+### 步骤 0.6：环境检查（按所选模式检查）
+
+- 若走 **步骤 1A（抖音主页）** 或 **步骤 1B（云端分析）**：仅需 `python3` 与 `AI_DOUYIN_API_KEY`（缺 Key 时引导用户到 `https://top9.cc/api-keys?utm_source=skill&utm_medium=missing_key&utm_campaign=video-to-subtitle-summary` 注册并创建 Key，不要输出已有密钥）。
+- 若走 **本地转写模式**：检查对应平台与转写后端依赖：
+
+```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
+[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.claude/skills/video-to-subtitle-summary"
+ENV_FILE="$SKILL_DIR/.env"
+
+read_env() {
+  local key="$1"
+  if [ -f "$ENV_FILE" ]; then
+    grep "^${key}=" "$ENV_FILE" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'"
+  else
+    printenv "$key"
+  fi
+}
+
+ASR_BACKEND="$(read_env ASR_BACKEND)"
+[ -z "$ASR_BACKEND" ] && ASR_BACKEND="faster-whisper"
+VIDEO_INFO_PROVIDER="$(read_env VIDEO_INFO_PROVIDER)"
+[ -z "$VIDEO_INFO_PROVIDER" ] && VIDEO_INFO_PROVIDER="ai-douyin"
 AI_DOUYIN_API_KEY="$(read_env AI_DOUYIN_API_KEY)"
 TIKHUB_TOKEN="$(read_env TIKHUB_TOKEN)"
 BYTEDANCE_VC_TOKEN="$(read_env BYTEDANCE_VC_TOKEN)"
@@ -177,7 +135,7 @@ if [ "{INPUT_MODE}" = "url" ]; then
       MISSING="$MISSING invalid_VIDEO_INFO_PROVIDER"
     fi
   fi
-  if [ "$VIDEO_INFO_PROVIDER" = "ai-douyin" ] || [ "$VIDEO_INFO_PROVIDER" = "tikhub" ]; then
+  if [ "{PLATFORM}" != "youtube" ]; then
     command -v jq >/dev/null 2>&1 || MISSING="$MISSING jq"
   fi
   if [ "{PLATFORM}" = "bilibili" ] || [ "{PLATFORM}" = "youtube" ]; then
@@ -204,34 +162,51 @@ fi
 
 if [ -n "$MISSING" ]; then
   echo "ERROR: 缺少必需依赖或配置:$MISSING"
-  echo "ASR_BACKEND=$ASR_BACKEND VIDEO_INFO_PROVIDER=$VIDEO_INFO_PROVIDER"
-  echo "ASR_BACKEND 可选值: faster-whisper / volcengine"
-  echo "VIDEO_INFO_PROVIDER 可选值: ai-douyin / tikhub"
   exit 1
 else
   echo "OK: 运行依赖已就绪 (ASR_BACKEND=$ASR_BACKEND)"
 fi
 ```
 
-如果检查失败：
-- `ASR_BACKEND=faster-whisper`：优先运行 `python3 "$SKILL_DIR/scripts/install_faster_whisper.py"`，或参考 [docs/faster-whisper-setup.md](./docs/faster-whisper-setup.md)
-- `ASR_BACKEND=volcengine`：参考 [docs/bytedance-vc-setup.md](./docs/bytedance-vc-setup.md)
-- `AI_DOUYIN_API_KEY`：注册 [AI Douyin](https://top9.cc) 领取免费额度并创建 API Key；余额不足时充值积分，或改用 `VIDEO_INFO_PROVIDER=tikhub` + `TIKHUB_TOKEN`
+> 若本地缺少 `ffmpeg` / `faster-whisper` 但用户已配置 `AI_DOUYIN_API_KEY`（且处理的是在线链接），可直接询问或回退到 **步骤 1B（云端一站式分析）**，无需强制用户先装本地模型。
 
-### 步骤 1：获取视频信息/下载直链（仅在线视频模式）
+### 步骤 1A：抖音博主主页作品批量获取（按需）
 
-根据 URL 域名识别平台：
+```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
+[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.claude/skills/video-to-subtitle-summary"
+
+python3 "$SKILL_DIR/scripts/fetch_douyin_user_posts.py" \
+  "{DOUYIN_USER_URL_OR_SEC_UID}" \
+  --count 10 \
+  --sort-type 1
+```
+
+- `--sort-type 0` 为最新，`1` 为最热；`--max-cursor` 用于翻页；加 `--json` 返回完整结构化字段（含 `share_url`、`play_url`、点赞/评论数据）。
+- 成功获取后，Agent 可根据用户意图自动挑选前 N 条（默认建议先确认或取最热/最新前 3–5 条，避免无意过度扣费）继续调用 `analyze_video_cloud.py` 批量拆解。
+
+### 步骤 1B：云端一站式分析（免装 FFmpeg / Whisper，含抖音评论洞察）
+
+```bash
+SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
+[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.claude/skills/video-to-subtitle-summary"
+
+python3 "$SKILL_DIR/scripts/analyze_video_cloud.py" \
+  "{ORIGINAL_URL}" \
+  --output-dir "/tmp/video_analysis/{VIDEO_ID}"
+```
+
+- 脚本会提交 `POST /api/v1/analysis` 并自动轮询 `GET /api/v1/analysis/{id}`，完成后输出 Markdown（含 AI 总结、抖音评论洞察及完整转录文本），并写入 `/tmp/video_analysis/{VIDEO_ID}/summary.md` 与 `text.txt`。
+- 若遇到 `HTTP 402` 余额不足，脚本会直接打印当前积分、计费说明和充值链接，原样提示给用户即可。
+
+### 步骤 1C：获取视频信息/下载直链（本地转写模式 + 在线视频）
 
 | 平台 | URL 特征 | 默认处理方式 |
 | --- | --- | --- |
-| 抖音/TikTok | `douyin.com`、`v.douyin.com`、`tiktok.com` | `AI Douyin` 代理解析下载直链；可选 TikHub |
-| 小红书 | `xiaohongshu.com`、`xhslink.com` | `AI Douyin` 代理解析下载直链；可选 TikHub |
-| B 站 | `bilibili.com`、`b23.tv` | `AI Douyin` 代理解析下载直链；必要时可回退 `yt-dlp` |
-| YouTube | `youtube.com`、`youtu.be` | 不调用 AI Douyin/TikHub，直接进入步骤 2 抓字幕 |
-
-#### 默认推荐：AI Douyin 代理
-
-AI Douyin 适合不想单独注册 TikHub 的用户。注册 [https://top9.cc](https://top9.cc) 后领取免费额度并创建 API Key，成功解析下载直链后扣 10 积分；失败不扣。余额不足时接口返回 HTTP `402` / `insufficient balance`。
+| 抖音/TikTok | `douyin.com`、`v.douyin.com`、`tiktok.com` | i琢片（AI Douyin）解析直链（10 积分/次） |
+| 小红书 | `xiaohongshu.com`、`xhslink.com` | i琢片（AI Douyin）解析直链（10 积分/次） |
+| B 站 | `bilibili.com`、`b23.tv` | i琢片（AI Douyin）解析直链；必要时回退 `yt-dlp` |
+| YouTube | `youtube.com`、`youtu.be` | 不调用 AI Douyin，直接进入步骤 2 抓字幕 |
 
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
@@ -249,14 +224,17 @@ read_env() {
 AI_DOUYIN_API_BASE="$(read_env AI_DOUYIN_API_BASE)"
 [ -z "$AI_DOUYIN_API_BASE" ] && AI_DOUYIN_API_BASE="https://top9.cc"
 AI_DOUYIN_API_KEY="$(read_env AI_DOUYIN_API_KEY)"
+WEB_BASE="${AI_DOUYIN_API_BASE%/api/v1}"
+WEB_BASE="${WEB_BASE%/api}"
+WEB_BASE="${WEB_BASE%/}"
 
-# API Base 支持填 https://top9.cc 或 https://top9.cc/api/v1
 case "$AI_DOUYIN_API_BASE" in
   */api/v1) AI_DOUYIN_DOWNLOAD_URL_ENDPOINT="$AI_DOUYIN_API_BASE/video/download-url" ;;
   */api) AI_DOUYIN_DOWNLOAD_URL_ENDPOINT="$AI_DOUYIN_API_BASE/v1/video/download-url" ;;
   *) AI_DOUYIN_DOWNLOAD_URL_ENDPOINT="${AI_DOUYIN_API_BASE%/}/api/v1/video/download-url" ;;
 esac
 
+mkdir -p /tmp/video_analysis
 curl -sS -w '\n%{http_code}' -X POST "$AI_DOUYIN_DOWNLOAD_URL_ENDPOINT" \
   -H "X-API-Key: $AI_DOUYIN_API_KEY" \
   -H "Content-Type: application/json" \
@@ -267,91 +245,35 @@ HTTP_CODE=$(tail -n1 /tmp/video_analysis/download_url_response.txt)
 sed '$d' /tmp/video_analysis/download_url_response.txt > /tmp/video_analysis/download_url.json
 
 if [ "$HTTP_CODE" = "402" ]; then
-  echo "ERROR: AI Douyin 余额不足（insufficient balance）。请到 https://top9.cc 购买积分，或改用 VIDEO_INFO_PROVIDER=tikhub + TIKHUB_TOKEN。"
+  echo "ERROR: i琢片（AI Douyin）积分不足（HTTP 402 insufficient balance）。"
+  echo "计费参考：1 元 = 100 积分；直链解析 10 积分/次，抖音主页作品 5 积分/次，云端分析 10 积分/分钟，满 20/50/100 元再送 5%/7%/10%。"
+  echo "请前往充值：${WEB_BASE}/recharge?utm_source=skill&utm_medium=402_prompt&utm_campaign=video-to-subtitle-summary"
   exit 1
 elif [ "$HTTP_CODE" = "401" ]; then
-  echo "ERROR: AI Douyin API Key 缺失或无效。请检查 AI_DOUYIN_API_KEY。"
+  echo "ERROR: i琢片 API Key 缺失或无效，请检查 AI_DOUYIN_API_KEY：${WEB_BASE}/api-keys?utm_source=skill&utm_medium=401_prompt&utm_campaign=video-to-subtitle-summary"
   exit 1
 elif [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-  echo "ERROR: AI Douyin 解析失败 (HTTP $HTTP_CODE)"
+  echo "ERROR: i琢片解析失败 (HTTP $HTTP_CODE)"
   cat /tmp/video_analysis/download_url.json
   exit 1
 fi
 
 VIDEO_URL=$(jq -r '.download_url // empty' /tmp/video_analysis/download_url.json)
-VIDEO_URL_COUNT=$(jq -r '(.download_urls // [.download_url] | map(select(. != null and . != "")) | length)' /tmp/video_analysis/download_url.json)
-EXTRACTED_URL=$(jq -r '.extracted_url // empty' /tmp/video_analysis/download_url.json)
-DOWNLOAD_COST=$(jq -r '.cost // 10' /tmp/video_analysis/download_url.json)
 [ -z "$VIDEO_URL" ] && echo "ERROR: 未返回 download_url" && cat /tmp/video_analysis/download_url.json && exit 1
 ```
 
-提取关键字段：
-
-```bash
-jq '{download_url, download_urls_count: (.download_urls // [] | length), extracted_url, cost}' /tmp/video_analysis/download_url.json
-```
-
-#### 可选视频接口获取方案：自有 TikHub Token
-
-当 `VIDEO_INFO_PROVIDER=tikhub` 时，使用自己的 TikHub Token 直接解析。注意不要把真实 Token 写入日志或回复。
-
-**抖音/TikTok：**
-
-```bash
-curl -s -X GET "https://api.tikhub.io/api/v1/hybrid/video_data?url={ENCODED_URL}&minimal=true" \
-  -H "Authorization: Bearer your_tikhub_api_token" \
-  -H "Accept: application/json"
-```
-
-优先提取无水印地址：
-
-```bash
-jq -r '.data.video_data.nwm_video_url // .data.video.play_addr.url_list[0] // empty'
-```
-
-**小红书：**
-
-```bash
-curl -s -X GET "https://api.tikhub.io/api/v1/xiaohongshu/web/get_note_info_v7?share_text={ENCODED_URL}" \
-  -H "Authorization: Bearer your_tikhub_api_token" \
-  -H "Accept: application/json"
-```
-
-**B 站：**
-
-```bash
-curl -s -X GET "https://api.tikhub.io/api/v1/bilibili/web/fetch_one_video_v3?url={ENCODED_URL}" \
-  -H "Authorization: Bearer your_tikhub_api_token" \
-  -H "Accept: application/json"
-```
-
-> B 站如未获得可下载直链，可在步骤 2 中使用 `yt-dlp` 下载。
-
-### 步骤 1.5：查询用户自己的 AI Douyin 历史任务（按需）
-
-当用户要求查看自己的历史 task / 最近任务 / 任务列表时，调用 AI Douyin 的 `GET /api/v1/tasks`。该接口使用 `X-API-Key` 认证，只返回当前 API Key 对应用户自己的任务。
+### 步骤 1.5：查询自己的 i琢片历史任务（按需）
 
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
 [ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.claude/skills/video-to-subtitle-summary"
 
-python3 "$SKILL_DIR/scripts/list_ai_douyin_tasks.py" \
-  --page 1 \
-  --page-size 20
+python3 "$SKILL_DIR/scripts/list_ai_douyin_tasks.py" --page 1 --page-size 20
 ```
 
-可选筛选：
+可选筛选：`--status completed`、`--search "关键词"`、`--json`。
 
-```bash
-python3 "$SKILL_DIR/scripts/list_ai_douyin_tasks.py" --status completed --page 1 --page-size 10
-python3 "$SKILL_DIR/scripts/list_ai_douyin_tasks.py" --search "关键词" --json
-```
-
-脚本默认读取 `$SKILL_DIR/.env` 或环境变量中的 `AI_DOUYIN_API_BASE` / `AI_DOUYIN_API_KEY`。输出给用户时不要展示真实 API Key。
-
-### 步骤 2：下载视频（仅在线视频模式）
-
-根据平台使用不同的下载方式：
+### 步骤 2：下载视频（本地转写模式 + 在线视频）
 
 **YouTube（优先直接抓字幕，不下载视频）：**
 
@@ -365,13 +287,7 @@ python3 "$SKILL_DIR/scripts/download_youtube_subtitles.py" \
   --languages zh-Hans,zh-Hant,zh,en
 ```
 
-输出文件固定为：
-- `/tmp/video_analysis/{VIDEO_ID}/subtitle.srt`
-- `/tmp/video_analysis/{VIDEO_ID}/text.txt`
-
-如果命令提示没有可用字幕，再使用 `yt-dlp` 下载音频或视频，并从步骤 3 继续走 `ASR_BACKEND`。
-
-**抖音 / TikTok / 小红书 / B 站（已有 `VIDEO_URL` 下载直链时）：**
+**抖音 / TikTok / 小红书 / B 站（已有 `download_url.json` 时）：**
 
 ```bash
 mkdir -p /tmp/video_analysis/{VIDEO_ID}
@@ -383,7 +299,7 @@ python3 "$SKILL_DIR/scripts/download_video_candidates.py" \
   --timeout 30
 ```
 
-**B 站（没有下载直链时回退）：**
+**B 站（无直链时回退）：**
 
 ```bash
 mkdir -p /tmp/video_analysis/{BVID}
@@ -392,25 +308,13 @@ yt-dlp -o /tmp/video_analysis/{BVID}/video.mp4 "https://www.bilibili.com/video/{
 
 ### 步骤 3：提取音频（本地音频文件可跳过）
 
-> 本地文件模式下，如果输入是本地视频文件，将 `{VIDEO_ID}` 替换为文件名（不含扩展名），输入路径替换为实际视频路径。
-
 ```bash
 ffmpeg -i /tmp/video_analysis/{VIDEO_ID}/video.mp4 -q:a 0 -map a -y /tmp/video_analysis/{VIDEO_ID}/audio.mp3
 ```
 
-### 步骤 4：根据 `ASR_BACKEND` 选择字幕后端
+### 步骤 4：根据 `ASR_BACKEND` 转写字幕（本地转写模式）
 
-如果平台是 YouTube 且步骤 2 已成功生成 `subtitle.srt` 和 `text.txt`，跳过本步骤，直接进入步骤 5 总结。
-
-#### 方案 A：`ASR_BACKEND=faster-whisper`（默认）
-
-helper 路径：
-
-```bash
-$SKILL_DIR/scripts/transcribe_faster_whisper.py
-```
-
-执行命令：
+**方案 A：`ASR_BACKEND=faster-whisper`（默认）**
 
 ```bash
 SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
@@ -422,161 +326,39 @@ FW_PYTHON="${FW_PYTHON:-$HOME/.cache/video-to-subtitle-summary/faster-whisper-ve
   --output-dir /tmp/video_analysis/{VIDEO_ID}
 ```
 
-说明：
-- helper 会自动读取 `FW_MODEL_SIZE`、`FW_DEVICE`、`FW_COMPUTE_TYPE`
-- 当 `FW_DEVICE=auto` 时，只有检测到 NVIDIA/CUDA 才会使用 `device="cuda"`
-- 输出文件固定为：
-  - `/tmp/video_analysis/{VIDEO_ID}/subtitle.srt`
-  - `/tmp/video_analysis/{VIDEO_ID}/text.txt`
-
-#### 方案 B：`ASR_BACKEND=volcengine`
-
-提交任务：
+**方案 B：`ASR_BACKEND=volcengine`**
 
 ```bash
-SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
-[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.claude/skills/video-to-subtitle-summary"
-ENV_FILE="$SKILL_DIR/.env"
-if [ -f "$ENV_FILE" ]; then
-  BYTEDANCE_VC_TOKEN=$(grep "^BYTEDANCE_VC_TOKEN=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-  BYTEDANCE_VC_APPID=$(grep "^BYTEDANCE_VC_APPID=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-else
-  BYTEDANCE_VC_TOKEN="$BYTEDANCE_VC_TOKEN"
-  BYTEDANCE_VC_APPID="$BYTEDANCE_VC_APPID"
-fi
-
 curl -s -X POST "https://openspeech.bytedance.com/api/v1/vc/submit?appid=$BYTEDANCE_VC_APPID&language=zh-CN&words_per_line=20&max_lines=2" \
   -H "Content-Type: audio/mpeg" \
   -H "Authorization: Bearer;$BYTEDANCE_VC_TOKEN" \
   --data-binary @/tmp/video_analysis/{VIDEO_ID}/audio.mp3
 ```
 
-轮询结果：
-
-```bash
-SKILL_DIR="${SKILL_DIR:-$HOME/.codex/skills/video-to-subtitle-summary}"
-[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.claude/skills/video-to-subtitle-summary"
-ENV_FILE="$SKILL_DIR/.env"
-if [ -f "$ENV_FILE" ]; then
-  BYTEDANCE_VC_TOKEN=$(grep "^BYTEDANCE_VC_TOKEN=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-  BYTEDANCE_VC_APPID=$(grep "^BYTEDANCE_VC_APPID=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-else
-  BYTEDANCE_VC_TOKEN="$BYTEDANCE_VC_TOKEN"
-  BYTEDANCE_VC_APPID="$BYTEDANCE_VC_APPID"
-fi
-
-curl -s "https://openspeech.bytedance.com/api/v1/vc/query?appid=$BYTEDANCE_VC_APPID&id={TASK_ID}" \
-  -H "Authorization: Bearer;$BYTEDANCE_VC_TOKEN"
-```
-
-结果处理：
-
-```bash
-jq -r '.utterances[].text' subtitle.json | tr '\n' ' ' > /tmp/video_analysis/{VIDEO_ID}/text.txt
-```
-
-生成 SRT：
-
-```python
-import json
-
-with open('subtitle.json', 'r') as f:
-    data = json.load(f)
-
-def ms_to_srt(ms):
-    h, m, s, millis = ms//3600000, (ms%3600000)//60000, (ms%60000)//1000, ms%1000
-    return f"{h:02d}:{m:02d}:{s:02d},{millis:03d}"
-
-with open('/tmp/video_analysis/{VIDEO_ID}/subtitle.srt', 'w') as f:
-    for i, u in enumerate(data['utterances'], 1):
-        f.write(f"{i}\n{ms_to_srt(u['start_time'])} --> {ms_to_srt(u['end_time'])}\n{u['text']}\n\n")
-```
+随后轮询 `https://openspeech.bytedance.com/api/v1/vc/query?appid=$BYTEDANCE_VC_APPID&id={TASK_ID}`，提取 `text.txt` 与 `subtitle.srt`。
 
 ### 步骤 5：AI 生成总结
 
-直接由 Claude 完成，无需调用第三方总结 API。
+读取 `text.txt`，结合原视频标题（抖音取 `desc`、小红书/B站取 `title`）、作者和平台上下文，修正同音字与断句后输出：
+1. **AI 生成标题**（不超过 30 字）
+2. **AI 摘要**（200-300 字）
+3. **核心要点**（3-5 条结构化要点）
+4. **生成文件列表**（`video.mp4`、`audio.mp3`、`subtitle.srt`、`text.txt`）
 
-读取 `text.txt` 后生成。
+---
 
-总结时应一并提供以下上下文：
-- **原视频标题**：如果是在线视频，优先使用平台返回的原始标题字段
-  - 抖音/TikTok：优先 `desc`
-  - 小红书：优先 `title`
-  - B 站：优先 `title`
-- **兜底标题**：如果没有明确标题，可使用文件名或视频 ID 作为参考标识
-- **字幕说明**：明确告诉 Claude，正文可能来自 YouTube 字幕、自动字幕或语音识别，可能存在同音字、断句、专有名词识别错误；在不偏离原意的前提下，可以结合原视频标题和上下文做适度修正
+## 可选自托管扩展：TikHub（当 `VIDEO_INFO_PROVIDER=tikhub`）
 
-推荐直接使用如下提示方式：
-
-```text
-以下是一个视频的分析素材，请基于这些信息生成总结：
-
-原视频标题：{ORIGINAL_TITLE}
-来源平台：{PLATFORM}
-作者：{AUTHOR}
-说明：下面的正文来自平台字幕、自动字幕或语音识别，可能存在少量识别误差、断句问题或专有名词错误。请以原视频标题和上下文为参考，在不改变原意的前提下做适度修正，再完成总结。
-
-语音识别文本：
-{TEXT_CONTENT}
-
-请输出：
-1. AI生成标题：简洁概括，不超过30字；可以参考原视频标题，但不要机械照抄，必要时可根据正文纠正明显错误
-2. AI摘要：提炼主要观点和关键信息，200-300字
-3. 核心要点：输出3-5条结构化要点
-```
-
-如果原视频标题与正文明显冲突：
-- 优先以正文主旨为准
-- 保留“可能因语音识别存在误差”的判断，不要凭空补充未出现的信息
-
-1. **标题**：简洁概括，不超过 30 字
-2. **摘要**：主要观点和关键信息，200-300 字
-3. **要点**：核心观点的结构化列表
-
-## 输出格式
-
-```markdown
-## 视频分析结果
-
-### 视频信息
-
-| 项目 | 内容 |
-| --- | --- |
-| 视频ID | xxx |
-| 作者 | xxx |
-| 时长 | xxx |
-
-### AI生成标题
-
-xxx
-
-### AI摘要
-
-xxx
-
-### 核心要点
-
-1. xxx
-2. xxx
-
-### 生成文件
-
-- 视频: /tmp/video_analysis/{ID}/video.mp4
-- 音频: /tmp/video_analysis/{ID}/audio.mp3
-- SRT字幕: /tmp/video_analysis/{ID}/subtitle.srt
-- 纯文本: /tmp/video_analysis/{ID}/text.txt
-```
+仅当用户显式设置 `VIDEO_INFO_PROVIDER=tikhub` 与 `TIKHUB_TOKEN` 时使用；注意不要把真实 Token 写入日志或回复：
+- 抖音：`GET https://api.tikhub.io/api/v1/hybrid/video_data?url={ENCODED_URL}&minimal=true`
+- 小红书：`GET https://api.tikhub.io/api/v1/xiaohongshu/web/get_note_info_v7?share_text={ENCODED_URL}`
+- B 站：`GET https://api.tikhub.io/api/v1/bilibili/web/fetch_one_video_v3?url={ENCODED_URL}`
 
 ## 常见问题
 
 | 问题 | 解决方案 |
 | --- | --- |
-| **缺少环境变量** | 先确认 `ASR_BACKEND`；抖音/小红书/B站默认需要 `AI_DOUYIN_API_KEY`，自有 TikHub 模式需要 `TIKHUB_TOKEN`；火山后端需要 `BYTEDANCE_VC_TOKEN` 和 `BYTEDANCE_VC_APPID` |
-| `ASR_BACKEND` 无效 | 只支持 `faster-whisper` 和 `volcengine` |
-| `faster-whisper` 导入失败 | 执行 `python3 "$SKILL_DIR/scripts/install_faster_whisper.py"`，安装 helper 会先测速 PyPI 镜像并创建独立 venv；自定义 venv 时设置 `FW_PYTHON=/path/to/venv/bin/python` |
-| 火山 API 认证失败 | Authorization 必须是 `Bearer;token`（分号无空格） |
-| 首次运行较慢 | `faster-whisper` 首次会下载模型，等待下载完成后重试 |
-| CUDA 环境不可用 | `FW_DEVICE=auto` 会自动回退到 CPU；只有 NVIDIA/CUDA 才走 GPU |
-| 视频下载失败 | AI Douyin 返回 401 时检查 API Key；402 时充值积分或切换 TikHub；直链下载加 `User-Agent`；B 站可回退 `yt-dlp` |
-| FFmpeg 找不到 | macOS: `brew install ffmpeg` / Linux: `sudo apt install ffmpeg` / Windows: `choco install ffmpeg` |
-| yt-dlp 找不到 | macOS: `brew install yt-dlp` / 通用: `python3 -m pip install -U yt-dlp`（B 站 / YouTube 需要） |
+| `401` API Key 无效 | 前往 [API 密钥页](https://top9.cc/api-keys?utm_source=skill&utm_medium=401_faq&utm_campaign=video-to-subtitle-summary) 检查或新建 active Key |
+| `402` 积分不足 | 前往 [充值页](https://top9.cc/recharge?utm_source=skill&utm_medium=402_faq&utm_campaign=video-to-subtitle-summary) 充值（1 元 = 100 积分，满 20/50/100 元送 5%/7%/10%） |
+| 本地缺少 FFmpeg / Whisper | 处理在线链接时可直接改用 `scripts/analyze_video_cloud.py` 走云端分析；或安装 `ffmpeg` 并运行 `install_faster_whisper.py` |
+| 云端任务超时 | 勿立即重复提交；用 `scripts/list_ai_douyin_tasks.py` 查看任务状态 |

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import urllib.error
 import urllib.parse
@@ -13,39 +12,23 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-DEFAULT_API_BASE = "https://top9.cc"
-
-
-def load_env_file(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    if not path.exists():
-        return values
-
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip('"').strip("'")
-    return values
-
-
-def read_config(key: str, env_file: Path | None = None) -> str:
-    if env_file is not None:
-        env_values = load_env_file(env_file)
-        if env_values.get(key):
-            return env_values[key]
-    return os.environ.get(key, "")
+from ai_douyin_client import (  # noqa: E402
+    DEFAULT_API_BASE,
+    build_api_keys_url,
+    build_v1_endpoint,
+    default_env_file,
+    format_http_error,
+    load_env_file,
+    read_config,
+)
 
 
 def build_tasks_endpoint(api_base: str) -> str:
-    trimmed = api_base.rstrip("/")
-    if trimmed.endswith("/api/v1"):
-        return trimmed + "/tasks"
-    if trimmed.endswith("/api"):
-        return trimmed + "/v1/tasks"
-    return trimmed + "/api/v1/tasks"
+    return build_v1_endpoint(api_base, "/tasks")
 
 
 def fetch_tasks(
@@ -56,6 +39,7 @@ def fetch_tasks(
     page_size: int,
     status: str = "",
     search: str = "",
+    api_base: str = DEFAULT_API_BASE,
     opener: Callable[..., Any] = urllib.request.urlopen,
     timeout: int = 30,
 ) -> dict[str, Any]:
@@ -76,7 +60,14 @@ def fetch_tasks(
             payload = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"AI Douyin tasks request failed: HTTP {exc.code} {body}") from exc
+        raise RuntimeError(
+            format_http_error(
+                exc.code,
+                body,
+                api_base=api_base,
+                action="AI Douyin tasks request",
+            )
+        ) from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"AI Douyin tasks request failed: {exc}") from exc
 
@@ -128,10 +119,6 @@ def render_markdown(response: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def default_env_file() -> Path:
-    return Path(__file__).resolve().parents[1] / ".env"
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--api-base", default="")
@@ -148,18 +135,27 @@ def main() -> int:
     api_base = args.api_base or read_config("AI_DOUYIN_API_BASE", args.env_file) or DEFAULT_API_BASE
     api_key = args.api_key or read_config("AI_DOUYIN_API_KEY", args.env_file)
     if not api_key:
-        print("ERROR: missing AI_DOUYIN_API_KEY", file=sys.stderr)
+        print(
+            f"ERROR: missing AI_DOUYIN_API_KEY. 请前往获取：{build_api_keys_url(api_base)}",
+            file=sys.stderr,
+        )
         return 1
 
-    response = fetch_tasks(
-        build_tasks_endpoint(api_base),
-        api_key,
-        page=args.page,
-        page_size=args.page_size,
-        status=args.status,
-        search=args.search,
-        timeout=args.timeout,
-    )
+    try:
+        response = fetch_tasks(
+            build_tasks_endpoint(api_base),
+            api_key,
+            page=args.page,
+            page_size=args.page_size,
+            status=args.status,
+            search=args.search,
+            api_base=api_base,
+            timeout=args.timeout,
+        )
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
     if args.json:
         print(json.dumps(response, ensure_ascii=False, indent=2))
     else:
